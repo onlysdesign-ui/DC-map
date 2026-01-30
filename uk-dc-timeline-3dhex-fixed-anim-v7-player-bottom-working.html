@@ -51,19 +51,35 @@
     .title h1 { font-size: 14px; margin: 0; font-weight: 650; color: var(--ui-text); }
     .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
     .btn {
-      border: 1px solid transparent;
-      background: var(--ui-button);
-      padding:7px 10px; border-radius:10px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: rgba(30, 41, 59, 0.95);
+      padding:7px 12px; border-radius:10px;
       cursor:pointer; user-select:none; color: var(--ui-text);
     }
     .btn:hover { background: var(--ui-button-hover); }
     .btn:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
     input[type="text"]{
-      border:1px solid var(--ui-border);
+      border:1px solid rgba(148, 163, 184, 0.35);
       padding:7px 10px; border-radius:10px;
       width:220px; outline:none;
-      background: rgba(15, 23, 42, 0.8);
+      background: rgba(15, 23, 42, 0.9);
       color: var(--ui-text);
+    }
+    input[type="file"]{
+      border:1px solid rgba(148, 163, 184, 0.35);
+      padding:6px 10px;
+      border-radius:10px;
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--ui-text);
+    }
+    input[type="file"]::file-selector-button{
+      margin-right:10px;
+      border:1px solid rgba(148, 163, 184, 0.4);
+      background: rgba(30, 41, 59, 0.95);
+      color: var(--ui-text);
+      padding:6px 10px;
+      border-radius:8px;
+      cursor:pointer;
     }
     input[type="range"]{ width:100%; }
     .pill{
@@ -71,6 +87,11 @@
       border:none;
       border-radius:999px; background:var(--ui-pill);
       font-size:12px; color:var(--ui-text); white-space:nowrap;
+    }
+    .labelText{
+      font-size:12px;
+      color: var(--ui-muted);
+      font-weight: 500;
     }
     .dot{ width:10px; height:10px; border-radius:999px;
       background: rgb(96,165,250);
@@ -120,29 +141,33 @@
       box-shadow: 0 14px 40px rgba(2, 6, 23, 0.7);
       padding: 10px 12px;
     }
-    .playerTopRow{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
-    .playerSlider{ width:100%; margin:8px 0 6px; }
+    .playerTopRow{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+    .playerHeader{ display:flex; flex-direction:column; gap:4px; }
+    .playerControls{ display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:center; margin-top:8px; }
+    .playerSlider{ width:100%; margin:0; }
     .playerLabels{ display:flex; justify-content:space-between; gap:10px; font-size:12px; color:var(--ui-text); }
     .pillGhost{ opacity:0.8; }
     .pillBig{ font-size:12px; padding:4px 12px; }
     .btnIcon{ width:38px; height:38px; border-radius:12px; padding:0; display:grid; place-items:center; }
     .btnPlayIcon{ width:46px; height:46px; border-radius:14px; padding:0; display:grid; place-items:center; font-size:16px; }
-      .current-date {
-  font-size: 24px;
-  font-weight: 400;
-  letter-spacing: 0.03em;
-  color: var(--ui-text);
-
-  /* убираем всё "UI-шное" */
-  background: none;
-  border: none;
-  box-shadow: none;
-  padding: 0;
-  border-radius: 0;
-
-  /* чуть воздуха */
-  line-height: 1.2;
-}
+    .current-date {
+      font-size: 30px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      color: var(--ui-text);
+      background: none;
+      border: none;
+      box-shadow: none;
+      padding: 0;
+      border-radius: 0;
+      line-height: 1.2;
+    }
+    .current-subtitle{
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--ui-text);
+      opacity: 0.9;
+    }
 </style>
 </head>
 
@@ -171,7 +196,7 @@
       <div class="twoCols">
         <div>
           <div class="labelRow">
-            <span class="pill">H3 resolution</span>
+            <span class="labelText">H3 resolution</span>
             <span id="resVal" class="pill">6</span>
           </div>
           <select id="h3res" class="select">
@@ -184,7 +209,7 @@
 
         <div>
           <div class="labelRow">
-            <span class="pill">Elevation</span>
+            <span class="labelText">Elevation</span>
             <span id="elevVal" class="pill">x240</span>
           </div>
           <input id="elev" type="range" min="40" max="12000" step="20" value="8000">
@@ -192,7 +217,7 @@
       </div>
       <div style="margin-top:10px;">
         <div class="labelRow">
-          <span class="pill">Palette</span>
+          <span class="labelText">Palette</span>
           <span id="paletteVal" class="pill">Mono Blue</span>
         </div>
         <select id="palette" class="select" style="width:100%;">
@@ -227,8 +252,8 @@
       </div>
 
       <div class="row" style="justify-content: space-between; margin-top:10px;">
-        <span class="pill">Distribution</span>
-        <label class="pill" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <span class="labelText">Distribution</span>
+        <label class="labelText" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
           <input id="logToggle" type="checkbox">
           log(1 + count)
         </label>
@@ -244,12 +269,16 @@
   <div class="playerDock" aria-label="Timeline player">
     <div class="playerCard">
       <div class="playerTopRow">
-        <button id="rewind" class="btn btnIcon" type="button" title="Rewind">⟲</button>
+        <div class="playerHeader">
           <span id="timeLabel" class="current-date">—</span>
-        <button id="play" class="btn btnPlayIcon" type="button" aria-label="Play/Pause" title="Play/Pause">▶</button>
+          <span class="current-subtitle">Data Center Expansion Map</span>
+        </div>
       </div>
 
-      <input id="slider" class="playerSlider" type="range" min="0" max="0" value="0" step="1" disabled />
+      <div class="playerControls">
+        <button id="play" class="btn btnPlayIcon" type="button" aria-label="Play/Pause" title="Play/Pause">▶</button>
+        <input id="slider" class="playerSlider" type="range" min="0" max="0" value="0" step="1" disabled />
+      </div>
 
       <div class="playerLabels">
         <span id="startLabel" class="pill pillGhost">—</span>
@@ -405,9 +434,8 @@ const sliderEl = document.getElementById("slider");
   function fmtDay(ms) {
     const d = new Date(ms);
     const y = d.getUTCFullYear();
-    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(d.getUTCDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
+    const monthName = new Intl.DateTimeFormat("en-En", { month: "long" }).format(d);
+    return `${y} ${monthName}`;
   }
   function extractPointsFromGeoJSON(geo) {
     const pts = [];
@@ -1034,7 +1062,6 @@ seedRegistryFromPoints(filteredPoints, res);
   // UI wiring
   sliderEl.addEventListener("input", () => { stopPlayback(); applyTimeline(Number(sliderEl.value)); });
   playBtn.addEventListener("click", () => { if (!days.length) return; playing ? stopPlayback() : startPlayback(); });
-  document.getElementById("rewind").addEventListener("click", () => { stopPlayback(); sliderEl.value="0"; applyTimeline(0); });
 
   elevEl.addEventListener("input", () => { setVals(); updateOverlay(); });
   logToggleEl.addEventListener("change", () => { updateOverlay(); });
