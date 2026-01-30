@@ -354,16 +354,16 @@ const sliderEl = document.getElementById("slider");
   setVals();
 
   // Data:
-  // point: {coordinates:[lon,lat], properties, tDayMs}
+  // point: {coordinates:[lon,lat], properties, tMonthMs}
   let allPoints = [];
   let filteredPoints = [];
 
-  // timeline days (UTC day)
-  let days = [];
-  let dayIndexByMs = new Map();
+  // timeline months (UTC month start)
+  let months = [];
+  let monthIndexByMs = new Map();
 
-  // accumulative counts per day: Array<Map<h3Cell, count>>
-  let h3ByDay = [];
+  // accumulative counts per month: Array<Map<h3Cell, count>>
+  let h3ByMonth = [];
 
   // layer data for current frame: [{cell, count}]
   let cellsNow = [];
@@ -432,7 +432,7 @@ const sliderEl = document.getElementById("slider");
   // playback
   let playing = false;
   let timer = null;
-  const PLAY_INTERVAL_MS = 220;
+  const PLAY_INTERVAL_MS = 300;
   let frameTick = 0; // increments each frame to force attribute updates & transitions
   let glowTicker = null;
   let glowActiveUntil = 0;
@@ -444,7 +444,20 @@ const sliderEl = document.getElementById("slider");
   // Helpers
   function getProp(p, keys) { for (const k of keys) if (p && p[k] != null && p[k] !== "") return p[k]; return ""; }
   function parseTimestampToMs(ts) { const d = new Date(ts); const ms = d.getTime(); return Number.isFinite(ms) ? ms : null; }
-  function toDayMs(ms) { const d = new Date(ms); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); }
+  function toMonthMs(ms) { const d = new Date(ms); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1); }
+  function buildMonthRange(minMs, maxMs) {
+    if (minMs == null || maxMs == null) return [];
+    const start = new Date(minMs);
+    const end = new Date(maxMs);
+    let cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1));
+    const endMonth = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1));
+    const range = [];
+    while (cursor <= endMonth) {
+      range.push(cursor.getTime());
+      cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 1));
+    }
+    return range;
+  }
   function fmtDay(ms) {
     const d = new Date(ms);
     const y = d.getUTCFullYear();
@@ -917,12 +930,17 @@ lineWidthMinPixels: 1.5,
     cellRegistry.clear();
     stableCells = [];
 
-    // collect unique days
-    const daySet = new Set();
-    for (const p of filteredPoints) if (p.tDayMs != null) daySet.add(p.tDayMs);
-    days = Array.from(daySet).sort((a,b)=>a-b);
+    // collect unique months + min/max for full range
+    let minMonth = null;
+    let maxMonth = null;
+    for (const p of filteredPoints) {
+      if (p.tMonthMs == null) continue;
+      if (minMonth == null || p.tMonthMs < minMonth) minMonth = p.tMonthMs;
+      if (maxMonth == null || p.tMonthMs > maxMonth) maxMonth = p.tMonthMs;
+    }
+    months = buildMonthRange(minMonth, maxMonth);
 
-    if (!days.length) {
+    if (!months.length) {
       sliderEl.disabled = true;
       sliderEl.min = "0"; sliderEl.max = "0"; sliderEl.value = "0";
       timeLabelEl.textContent = "—";
@@ -946,11 +964,11 @@ seedRegistryFromPoints(filteredPoints, res);
       return;
     }
 
-    // index days
-    dayIndexByMs = new Map(days.map((ms, i) => [ms, i]));
+    // index months
+    monthIndexByMs = new Map(months.map((ms, i) => [ms, i]));
 
     // prepare accumulative maps
-    h3ByDay = Array.from({length: days.length}, () => new Map());
+    h3ByMonth = Array.from({length: months.length}, () => new Map());
 
     const res = Number(h3resEl.value);
 
@@ -968,43 +986,43 @@ seedRegistryFromPoints(filteredPoints, res);
 
     // fill accumulative counts
     for (const p of filteredPoints) {
-      if (p.tDayMs == null) continue;
+      if (p.tMonthMs == null) continue;
 
-      const idx = dayIndexByMs.get(p.tDayMs);
+      const idx = monthIndexByMs.get(p.tMonthMs);
       if (idx == null) continue;
 
       const [lon, lat] = p.coordinates;
       const cell = h3.latLngToCell(lat, lon, res);
 
-      // add this point to its day and all future days (accumulative)
-      for (let j = idx; j < days.length; j++) {
-        const m = h3ByDay[j];
+      // add this point to its month and all future months (accumulative)
+      for (let j = idx; j < months.length; j++) {
+        const m = h3ByMonth[j];
         m.set(cell, (m.get(cell) || 0) + 1);
       }
     }
 
     sliderEl.disabled = false;
     sliderEl.min = "0";
-    sliderEl.max = String(days.length - 1);
+    sliderEl.max = String(months.length - 1);
     sliderEl.value = "0";
-    stepsLabelEl.textContent = `${days.length} steps`;
+    stepsLabelEl.textContent = `${months.length} steps`;
     const startEl = document.getElementById("startLabel");
     const endEl = document.getElementById("endLabel");
-    if (startEl) startEl.textContent = formatDayText(days[0]);
-    if (endEl) endEl.textContent = formatDayText(days[days.length-1]);
+    if (startEl) startEl.textContent = formatDayText(months[0]);
+    if (endEl) endEl.textContent = formatDayText(months[months.length-1]);
 
     applyTimeline(0);
 
-    setStat(`Points: ${allPoints.length}. After search: ${filteredPoints.length}. Timeline steps: ${days.length} (by day). H3 res: ${res}.`);
-    console.log("days:", days.length, "cellsNow sample:", cellsNow.slice(0,3));
+    setStat(`Points: ${allPoints.length}. After search: ${filteredPoints.length}. Timeline steps: ${months.length} (by month). H3 res: ${res}.`);
+    console.log("months:", months.length, "cellsNow sample:", cellsNow.slice(0,3));
 
   }
 
   function applyTimeline(idx) {
-    const t = days[idx];
+    const t = months[idx];
     renderTimeLabel(t);
 
-    const m = h3ByDay[idx] || new Map();
+    const m = h3ByMonth[idx] || new Map();
 
     // Update stable objects (reuse across frames) so transitions are smooth.
     // First set all known cells to 0, then apply counts for this frame.
@@ -1070,12 +1088,12 @@ seedRegistryFromPoints(filteredPoints, res);
     if (timer) { clearInterval(timer); timer = null; }
   }
   function startPlayback() {
-    if (!days.length) return;
+    if (!months.length) return;
     playing = true;
     playBtn.textContent = "❚❚";
     timer = setInterval(() => {
       const v = Number(sliderEl.value);
-      if (v >= days.length - 1) { stopPlayback(); return; }
+      if (v >= months.length - 1) { stopPlayback(); return; }
       sliderEl.value = String(v + 1);
       applyTimeline(Number(sliderEl.value));
     }, PLAY_INTERVAL_MS);
@@ -1083,7 +1101,7 @@ seedRegistryFromPoints(filteredPoints, res);
 
   // UI wiring
   sliderEl.addEventListener("input", () => { stopPlayback(); applyTimeline(Number(sliderEl.value)); });
-  playBtn.addEventListener("click", () => { if (!days.length) return; playing ? stopPlayback() : startPlayback(); });
+  playBtn.addEventListener("click", () => { if (!months.length) return; playing ? stopPlayback() : startPlayback(); });
 
   elevEl.addEventListener("input", () => { setVals(); updateOverlay(); });
   logToggleEl.addEventListener("change", () => { updateOverlay(); });
@@ -1109,7 +1127,7 @@ seedRegistryFromPoints(filteredPoints, res);
   
   document.getElementById("clear").addEventListener("click", () => {
     stopPlayback();
-    allPoints=[]; filteredPoints=[]; days=[]; dayIndexByMs=new Map(); h3ByDay=[]; cellsNow=[];
+    allPoints=[]; filteredPoints=[]; months=[]; monthIndexByMs=new Map(); h3ByMonth=[]; cellsNow=[];
     fileEl.value="";
     sliderEl.disabled=true; sliderEl.min="0"; sliderEl.max="0"; sliderEl.value="0";
     timeLabelEl.textContent="—"; stepsLabelEl.textContent="0 steps"; shownPillEl.textContent="0 shown";
@@ -1139,7 +1157,7 @@ seedRegistryFromPoints(filteredPoints, res);
       return {
         coordinates: p.coordinates,
         properties: props,
-        tDayMs: (ms != null) ? toDayMs(ms) : null
+        tMonthMs: (ms != null) ? toMonthMs(ms) : null
       };
     }).filter(p => Array.isArray(p.coordinates) && typeof p.coordinates[0] === "number" && typeof p.coordinates[1] === "number");
 
