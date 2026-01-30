@@ -158,6 +158,9 @@
     .current-date {
       font-size: 18px;
       font-weight: 500;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
       letter-spacing: 0.02em;
       color: var(--ui-text);
       background: none;
@@ -172,6 +175,15 @@
       font-weight: 500;
       color: var(--ui-text);
       opacity: 0.9;
+    }
+    .current-year{
+      font-size: 3em;
+      line-height: 1;
+      font-weight: 600;
+    }
+    .current-month{
+      font-size: 1em;
+      line-height: 1.2;
     }
 </style>
 </head>
@@ -437,7 +449,15 @@ const sliderEl = document.getElementById("slider");
     const d = new Date(ms);
     const y = d.getUTCFullYear();
     const monthName = new Intl.DateTimeFormat("en-En", { month: "long" }).format(d);
-    return `${y} ${monthName}`;
+    return { year: y, month: monthName };
+  }
+  function formatDayText(ms) {
+    const { year, month } = fmtDay(ms);
+    return `${year} ${month}`;
+  }
+  function renderTimeLabel(ms) {
+    const { year, month } = fmtDay(ms);
+    timeLabelEl.innerHTML = `<span class="current-year">${year}</span><span class="current-month">${month}</span>`;
   }
   function extractPointsFromGeoJSON(geo) {
     const pts = [];
@@ -970,8 +990,8 @@ seedRegistryFromPoints(filteredPoints, res);
     stepsLabelEl.textContent = `${days.length} steps`;
     const startEl = document.getElementById("startLabel");
     const endEl = document.getElementById("endLabel");
-    if (startEl) startEl.textContent = fmtDay(days[0]);
-    if (endEl) endEl.textContent = fmtDay(days[days.length-1]);
+    if (startEl) startEl.textContent = formatDayText(days[0]);
+    if (endEl) endEl.textContent = formatDayText(days[days.length-1]);
 
     applyTimeline(0);
 
@@ -982,7 +1002,7 @@ seedRegistryFromPoints(filteredPoints, res);
 
   function applyTimeline(idx) {
     const t = days[idx];
-    timeLabelEl.textContent = fmtDay(t);
+    renderTimeLabel(t);
 
     const m = h3ByDay[idx] || new Map();
 
