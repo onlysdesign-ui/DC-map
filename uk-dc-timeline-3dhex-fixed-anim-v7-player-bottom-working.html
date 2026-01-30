@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>UK DC timeline (MapLibre + deck.gl + H3)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- MapLibre -->
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+
+  <!-- deck.gl -->
+  <script src="https://unpkg.com/deck.gl@8.9.36/dist.min.js"></script>
+
+  <!-- H3 (stable hex indexing) -->
+  <script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
+<script src="https://unpkg.com/d3-ease@3"></script>
+    
+  <style>
+    html, body { margin:0; height:100%; background:#f6f8fc; font:14px system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    #container { position:relative; height:100%; }
+    #map { position:absolute; inset:0; }
+
+    .panel {
+      position:absolute; z-index:1000; left:16px; top:16px;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: 12px 14px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 14px;
+      box-shadow: 0 14px 40px rgba(15, 23, 42, 0.12);
+      max-width: 480px;
+    }
+    .title { display:flex; align-items:center; justify-content: space-between; gap: 12px; }
+    .title h1 { font-size: 14px; margin: 0; font-weight: 650; color: #0f172a; }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .btn {
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      background:#fff; padding:7px 10px; border-radius:10px;
+      cursor:pointer; user-select:none; color:#0f172a;
+    }
+    input[type="text"]{
+      border:1px solid rgba(15,23,42,0.12);
+      padding:7px 10px; border-radius:10px;
+      width:220px; outline:none;
+    }
+    input[type="range"]{ width:100%; }
+    .pill{
+      display:inline-block; padding:3px 10px;
+      border:1px solid rgba(15,23,42,0.10);
+      border-radius:999px; background:rgba(255,255,255,0.9);
+      font-size:12px; color:#0f172a; white-space:nowrap;
+    }
+    .dot{ width:10px; height:10px; border-radius:999px;
+      background: rgb(38,124,255);
+      box-shadow:0 0 0 6px rgba(38,124,255,0.12);
+      display:inline-block; margin-right:8px;
+    }
+    .timeline { margin-top:10px; padding-top:10px; border-top:1px solid rgba(15,23,42,0.08); display:grid; gap:10px; }
+    .timeinfo{ display:flex; justify-content:space-between; gap:10px; font-size:12px; color:#0f172a; }
+    .twoCols{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .labelRow{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .muted{ color:#475569; font-size:12px; margin-top:8px; }
+    .stat{ margin-top:10px; font-size:12px; color:#0f172a; }
+    .select {
+      border:1px solid rgba(15,23,42,0.12);
+      background:#fff;
+      padding:7px 10px;
+      border-radius:10px;
+      color:#0f172a;
+      outline:none;
+    }
+  
+    /* Infographic feel: лёгкое свечение/смягчение именно для deck.gl слоя */
+    canvas.deckgl-overlay, .deckgl-overlay canvas {
+      filter:
+        drop-shadow(0 0 6px rgba(0, 125, 255, 0.22))
+        drop-shadow(0 0 18px rgba(0, 125, 255, 0.10));
+    }
+
+
+    /* Player dock */
+    .playerDock{
+      position:absolute;
+      left:50%;
+      bottom:18px;
+      transform:translateX(-50%);
+      z-index:1200;
+      pointer-events:none; /* allow map interactions around it */
+      width:min(720px, calc(100vw - 40px));
+    }
+    .playerCard{
+      pointer-events:auto;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(15, 23, 42, 0.10);
+      border-radius: 16px;
+      box-shadow: 0 14px 40px rgba(15, 23, 42, 0.18);
+      padding: 10px 12px;
+    }
+    .playerTopRow{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .playerSlider{ width:100%; margin:8px 0 6px; }
+    .playerLabels{ display:flex; justify-content:space-between; gap:10px; font-size:12px; color:#0f172a; }
+    .pillGhost{ opacity:0.8; }
+    .pillBig{ font-size:12px; padding:4px 12px; }
+    .btnIcon{ width:38px; height:38px; border-radius:12px; padding:0; display:grid; place-items:center; }
+    .btnPlayIcon{ width:46px; height:46px; border-radius:14px; padding:0; display:grid; place-items:center; font-size:16px; }
+      .current-date {
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  color: #000;
+
+  /* убираем всё "UI-шное" */
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+
+  /* чуть воздуха */
+  line-height: 1.2;
+}
+</style>
+</head>
+
+<body>
+<div id="container">
+  <div id="map"></div>
+
+  <div class="panel">
+    <div class="title">
+      <h1><span class="dot"></span>Data centers timeline (3D hex)</h1>
+      <span id="shownPill" class="pill">0 shown</span>
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <input id="file" type="file" accept=".geojson,.json" class="btn">
+      <button id="clear" class="btn" type="button">Clear</button>
+      <button id="fit" class="btn" type="button">Fit</button>
+    </div>
+<div class="settings">
+      <div class="twoCols">
+        <div>
+          <div class="labelRow">
+            <span class="pill">H3 resolution</span>
+            <span id="resVal" class="pill">6</span>
+          </div>
+          <select id="h3res" class="select">
+            <option value="5">5 (coarse)</option>
+            <option value="6" selected>6 (default)</option>
+            <option value="7">7 (detailed)</option>
+            <option value="8">8 (very detailed)</option>
+          </select>
+        </div>
+
+        <div>
+          <div class="labelRow">
+            <span class="pill">Elevation</span>
+            <span id="elevVal" class="pill">x240</span>
+          </div>
+          <input id="elev" type="range" min="40" max="12000" step="20" value="8000">
+        </div>
+      </div>
+
+      <div class="row" style="justify-content: space-between; margin-top:10px;">
+        <span class="pill">Distribution</span>
+        <label class="pill" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+          <input id="logToggle" type="checkbox">
+          log(1 + count)
+        </label>
+      </div>
+    </div>
+</div>
+    <div id="stat" class="stat" style="display:none"></div>
+
+  </div>
+
+  <!-- Center-bottom player dock -->
+  <div class="playerDock" aria-label="Timeline player">
+    <div class="playerCard">
+      <div class="playerTopRow">
+        <button id="rewind" class="btn btnIcon" type="button" title="Rewind">⟲</button>
+          <span id="timeLabel" class="current-date">—</span>
+        <button id="play" class="btn btnPlayIcon" type="button" aria-label="Play/Pause" title="Play/Pause">▶</button>
+      </div>
+
+      <input id="slider" class="playerSlider" type="range" min="0" max="0" value="0" step="1" disabled />
+
+      <div class="playerLabels">
+        <span id="startLabel" class="pill pillGhost">—</span>
+        <span id="stepsLabel" class="pill pillGhost">0 steps</span>
+        <span id="endLabel" class="pill pillGhost">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const {MapboxOverlay, PolygonLayer} = deck;
+  const h3 = window.h3 || window.h3js;
+    if (!h3) {
+      throw new Error("h3-js не загрузился (нет window.h3 / window.h3js)");
+    }
+
+  // Basemap style
+const STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+
+  const map = new maplibregl.Map({
+    container: "map",
+    style: STYLE_URL,
+    center: [-3.0, 54.5],
+    zoom: 5.8,
+    pitch: 68,
+    bearing: -12,
+    antialias: true
+  });
+  map.addControl(new maplibregl.NavigationControl({showCompass: true}), "top-right");
+
+  // UI
+  const statEl = document.getElementById("stat");
+  const fileEl = document.getElementById("file");
+const sliderEl = document.getElementById("slider");
+  const timeLabelEl = document.getElementById("timeLabel");
+  const stepsLabelEl = document.getElementById("stepsLabel");
+  const shownPillEl = document.getElementById("shownPill");
+  const playBtn = document.getElementById("play");
+  const elevEl = document.getElementById("elev");
+  const elevValEl = document.getElementById("elevVal");
+  const logToggleEl = document.getElementById("logToggle");
+  const h3resEl = document.getElementById("h3res");
+  const resValEl = document.getElementById("resVal");
+
+  function setStat(t){ if (statEl) statEl.textContent = t || ""; }
+  function setVals(){
+    elevValEl.textContent = `x${Number(elevEl.value)}`;
+    resValEl.textContent = String(h3resEl.value);
+  }
+  setVals();
+
+  // Data:
+  // point: {coordinates:[lon,lat], properties, tDayMs}
+  let allPoints = [];
+  let filteredPoints = [];
+
+  // timeline days (UTC day)
+  let days = [];
+  let dayIndexByMs = new Map();
+
+  // accumulative counts per day: Array<Map<h3Cell, count>>
+  let h3ByDay = [];
+
+  // layer data for current frame: [{cell, count}]
+  let cellsNow = [];
+  // Stable registry: cell -> object reused across frames
+    const cellRegistry = new Map(); // cell -> {cell, count}
+    let stableCells = [];           // stable array passed to deck.gl
+  
+
+  // Base grid (so 0-count hexes still render)
+  const UK_GEOJSON_URL = "https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson";
+  let ukFeature = null;                 // GeoJSON feature for UK
+  const baseGridByRes = new Map();      // res -> array of h3 cell ids
+  let buildToken = 0;
+
+  async function ensureUKFeature() {
+    if (ukFeature) return ukFeature;
+    const r = await fetch(UK_GEOJSON_URL);
+    if (!r.ok) throw new Error("Failed to fetch UK GeoJSON: " + r.status);
+    const gj = await r.json();
+    const f = gj.features.find(ft => {
+      const nm = (ft.properties?.ADMIN || ft.properties?.name || "").toLowerCase();
+      return nm === "united kingdom";
+    });
+    if (!f) throw new Error("UK feature not found in countries.geojson");
+    ukFeature = f;
+    return ukFeature;
+  }
+                  
+  function seedRegistryFromPoints(points, res) {
+  for (const p of points) {
+    const [lon, lat] = p.coordinates || [];
+    if (typeof lon !== "number" || typeof lat !== "number") continue;
+
+    const cell = h3.latLngToCell(lat, lon, res);
+    if (!cellRegistry.has(cell)) cellRegistry.set(cell, { cell, count: 0 });
+  }
+  stableCells = Array.from(cellRegistry.values());
+}
+
+  function swapLonLatToLatLon(geom) {
+    // GeoJSON uses [lon,lat]; h3-js expects [lat,lon]
+    if (geom.type === "Polygon") {
+      return { type: "Polygon", coordinates: geom.coordinates.map(ring => ring.map(([lon, lat]) => [lat, lon])) };
+    }
+    if (geom.type === "MultiPolygon") {
+      return { type: "MultiPolygon", coordinates: geom.coordinates.map(poly => poly.map(ring => ring.map(([lon, lat]) => [lat, lon]))) };
+    }
+    throw new Error("Unsupported geometry type: " + geom.type);
+  }
+
+  async function ensureBaseGrid(res) {
+    if (baseGridByRes.has(res)) return baseGridByRes.get(res);
+    const uk = await ensureUKFeature();
+    const swapped = swapLonLatToLatLon(uk.geometry);
+    const cells = h3.polygonToCells(swapped, res);
+    baseGridByRes.set(res, cells);
+
+    // register all cells as stable objects with count=0
+    for (const cell of cells) {
+      if (!cellRegistry.has(cell)) cellRegistry.set(cell, { cell, count: 0 });
+    }
+    stableCells = Array.from(cellRegistry.values());
+    return cells;
+  }
+
+  // playback
+  let playing = false;
+  let timer = null;
+  const PLAY_INTERVAL_MS = 220;
+  let frameTick = 0; // increments each frame to force attribute updates & transitions
+
+  // Helpers
+  function getProp(p, keys) { for (const k of keys) if (p && p[k] != null && p[k] !== "") return p[k]; return ""; }
+  function parseTimestampToMs(ts) { const d = new Date(ts); const ms = d.getTime(); return Number.isFinite(ms) ? ms : null; }
+  function toDayMs(ms) { const d = new Date(ms); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); }
+  function fmtDay(ms) {
+    const d = new Date(ms);
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+  function extractPointsFromGeoJSON(geo) {
+    const pts = [];
+    const feats = geo?.type === "FeatureCollection" ? (geo.features || []) :
+                  geo?.type === "Feature" ? [geo] : [];
+    for (const f of feats) {
+      const g = f.geometry;
+      if (!g) continue;
+      if (g.type === "Point" && Array.isArray(g.coordinates)) {
+        pts.push({ coordinates: g.coordinates, properties: f.properties || {} });
+      }
+    }
+    return pts;
+  }
+  function boundsFromPoints(points) {
+    let minLon = 180, minLat = 90, maxLon = -180, maxLat = -90, ok = false;
+    for (const p of points) {
+      const [lon, lat] = p.coordinates || [];
+      if (typeof lon !== "number" || typeof lat !== "number") continue;
+      ok = true;
+      minLon = Math.min(minLon, lon); maxLon = Math.max(maxLon, lon);
+      minLat = Math.min(minLat, lat); maxLat = Math.max(maxLat, lat);
+    }
+    return ok ? [minLon, minLat, maxLon, maxLat] : null;
+  }
+    
+    function bboxToLatLonPolygon(b, padDeg = 0.6) {
+  const [minLon, minLat, maxLon, maxLat] = b;
+  const a = minLon - padDeg, btm = minLat - padDeg;
+  const c = maxLon + padDeg, top = maxLat + padDeg;
+
+  // h3-js polygonToCells ждёт [lat, lon]
+  return {
+    type: "Polygon",
+    coordinates: [[
+      [btm, a],
+      [btm, c],
+      [top, c],
+      [top, a],
+      [btm, a]
+    ]]
+  };
+}
+
+async function ensureBaseGridFromPoints(res) {
+  const b = boundsFromPoints(filteredPoints.length ? filteredPoints : allPoints);
+  if (!b) return [];
+
+  const poly = bboxToLatLonPolygon(b, 0.8); // pad можно увеличить
+  const cells = h3.polygonToCells(poly, res);
+
+  // регистрируем все клетки в реестре как стабильные объекты count=0
+  for (const cell of cells) {
+    if (!cellRegistry.has(cell)) cellRegistry.set(cell, { cell, count: 0 });
+  }
+  stableCells = Array.from(cellRegistry.values());
+  return cells;
+}
+
+
+  // Overlay
+  const overlay = new MapboxOverlay({layers: []});
+  map.addControl(overlay);
+
+function makeLayer() {
+  const elevationScale = Number(elevEl.value); // высота за 1 DC
+  const useLog = !!logToggleEl.checked;
+  const transform = (n) => useLog ? Math.log1p(n) : n;
+    
+    const BASE_ELEV = 0.18; // минимальная высота (до умножения на elevationScale)
+    const FILL_ALPHA = 255; // полностью непрозрачные бары
+    const LINE_ALPHA = 90;  // контур чуть мягче
+    const LINE_WIDTH = 1.3; // px
+    // белый -> яркий синий (минимум белый, максимум более насыщенный)
+  const colorRange = [
+    [255, 255, 255],   // min
+    [232, 242, 255],
+    [200, 225, 255],
+    [155, 204, 255],
+    [105, 178, 255],
+    [ 45, 150, 255],
+    [  0, 125, 255]    // max
+  ];
+
+const COLOR_CAP = 12; // 12+ будет просто самым насыщенным
+    function colorFor(v) {
+      const t = Math.max(0, Math.min(1, v / COLOR_CAP));
+        const idx = Math.floor(t * (colorRange.length - 1));
+      return colorRange[idx];
+    }
+
+  return new PolygonLayer({
+    id: "h3-polygons",
+    data: cellsNow, // [{cell, count}]
+    updateTriggers: {
+      getElevation: [frameTick, elevEl.value, logToggleEl.checked, h3resEl.value],
+      getFillColor: [frameTick, logToggleEl.checked],
+      getLineColor: [frameTick, logToggleEl.checked]
+    },
+    // h3 boundary -> polygon (lon/lat)
+    getPolygon: d => {
+        const boundary = h3.cellToBoundary(d.cell, true); // true => GeoJSON order [lng, lat]
+        return boundary.map(([lng, lat]) => [lng, lat]);  // deck.gl ждёт [lon, lat] = [lng, lat]
+
+    },
+      transitions: {
+  getElevation: {
+    duration: 700,
+    easing: d3.easeCubicOut
+  }
+},
+
+extruded: true,
+stroked: true,
+filled: true,
+wireframe: false,
+getElevation: d => d.count === 0 ? 0 : (BASE_ELEV + transform(d.count)) * elevationScale,
+getFillColor: d => {
+  // 0 не рисуем, чтобы не было "плитки" в море/пустоте
+  if (d.count === 0) return [0, 0, 0, 0];
+
+  const v = transform(d.count);
+  const [r, g, b] = colorFor(v);
+  return [r, g, b, 255];
+},
+
+getLineColor: d => {
+  // "точки" (контур) делаем полностью чёрными
+  if (d.count === 0) return [0, 0, 0, 0];
+  return [0, 0, 0, 220];
+},
+
+lineWidthMinPixels: 1.5,
+
+
+    opacity: 0.99,
+    pickable: true,
+    wireframe: false,
+    material: {
+  ambient: 0.12,
+  diffuse: 0.55,
+  shininess: 80,
+  specularColor: [255, 255, 255]
+}
+  });
+}
+
+
+  function updateOverlay() {
+    overlay.setProps({layers: [makeLayer()]});
+  }
+
+  // Timeline build (stable hex bins)
+  async function rebuildTimeline() {
+    stopPlayback();
+    const token = ++buildToken;
+
+    // Rebuild stable registry from scratch on every timeline rebuild.
+    // This prevents new hex objects from being created mid-playback (which would "pop" in).
+    cellRegistry.clear();
+    stableCells = [];
+
+    // collect unique days
+    const daySet = new Set();
+    for (const p of filteredPoints) if (p.tDayMs != null) daySet.add(p.tDayMs);
+    days = Array.from(daySet).sort((a,b)=>a-b);
+
+    if (!days.length) {
+      sliderEl.disabled = true;
+      sliderEl.min = "0"; sliderEl.max = "0"; sliderEl.value = "0";
+      timeLabelEl.textContent = "—";
+      stepsLabelEl.textContent = "0 steps";
+      shownPillEl.textContent = "0 shown";
+      // вместо пустоты показываем базовую сетку UK
+       try {
+          const res = Number(h3resEl.value);
+           // ВАЖНО: чтобы новые гексы не "появлялись", а росли 0→N,
+// регистрируем все ячейки, которые могут возникнуть из данных.
+seedRegistryFromPoints(filteredPoints, res);
+          await ensureBaseGridFromPoints(res);
+          cellsNow = stableCells;
+        } catch (e) {
+          console.warn("Base grid (bbox) failed:", e);
+          cellsNow = [];
+        }
+
+      updateOverlay();
+      setStat("Нет @timestamp в данных (или он не распарсился). Нужен properties['@timestamp'] из Overpass meta.");
+      return;
+    }
+
+    // index days
+    dayIndexByMs = new Map(days.map((ms, i) => [ms, i]));
+
+    // prepare accumulative maps
+    h3ByDay = Array.from({length: days.length}, () => new Map());
+
+    const res = Number(h3resEl.value);
+
+    // Pre-register all cells that can appear, so elevation transitions work as 0→N instead of popping in.
+    seedRegistryFromPoints(filteredPoints, res);
+
+    // base grid from points bbox (no external fetch)
+    try {
+      await ensureBaseGridFromPoints(res);
+    } catch (e) {
+      console.warn("Base grid (bbox) failed:", e);
+    }
+
+    if (token !== buildToken) return;
+
+    // fill accumulative counts
+    for (const p of filteredPoints) {
+      if (p.tDayMs == null) continue;
+
+      const idx = dayIndexByMs.get(p.tDayMs);
+      if (idx == null) continue;
+
+      const [lon, lat] = p.coordinates;
+      const cell = h3.latLngToCell(lat, lon, res);
+
+      // add this point to its day and all future days (accumulative)
+      for (let j = idx; j < days.length; j++) {
+        const m = h3ByDay[j];
+        m.set(cell, (m.get(cell) || 0) + 1);
+      }
+    }
+
+    sliderEl.disabled = false;
+    sliderEl.min = "0";
+    sliderEl.max = String(days.length - 1);
+    sliderEl.value = "0";
+    stepsLabelEl.textContent = `${days.length} steps`;
+    const startEl = document.getElementById("startLabel");
+    const endEl = document.getElementById("endLabel");
+    if (startEl) startEl.textContent = fmtDay(days[0]);
+    if (endEl) endEl.textContent = fmtDay(days[days.length-1]);
+
+    applyTimeline(0);
+
+    setStat(`Points: ${allPoints.length}. After search: ${filteredPoints.length}. Timeline steps: ${days.length} (by day). H3 res: ${res}.`);
+    console.log("days:", days.length, "cellsNow sample:", cellsNow.slice(0,3));
+
+  }
+
+  function applyTimeline(idx) {
+    const t = days[idx];
+    timeLabelEl.textContent = fmtDay(t);
+
+    const m = h3ByDay[idx] || new Map();
+
+    // Update stable objects (reuse across frames) so transitions are smooth.
+    // First set all known cells to 0, then apply counts for this frame.
+    for (const obj of stableCells) obj.count = 0;
+    for (const [cell, count] of m.entries()) {
+      const obj = cellRegistry.get(cell);
+      if (!obj) continue; // never create new cells during playback
+      obj.count = count;
+    }
+
+    // IMPORTANT: deck.gl transitions are triggered when the `data` prop changes.
+    // We keep stable object identities (so values can tween), but pass a new
+    // array reference each frame so attributes re-evaluate and animate.
+    cellsNow = stableCells.slice();
+    frameTick++;
+
+
+    const total = Array.from(m.values()).reduce((s, v) => s + v, 0);
+    shownPillEl.textContent = `${total} shown`;
+
+    updateOverlay();
+  }
+
+  // Playback
+  function stopPlayback() {
+    playing = false;
+    playBtn.textContent = "▶";
+    if (timer) { clearInterval(timer); timer = null; }
+  }
+  function startPlayback() {
+    if (!days.length) return;
+    playing = true;
+    playBtn.textContent = "❚❚";
+    timer = setInterval(() => {
+      const v = Number(sliderEl.value);
+      if (v >= days.length - 1) { stopPlayback(); return; }
+      sliderEl.value = String(v + 1);
+      applyTimeline(Number(sliderEl.value));
+    }, PLAY_INTERVAL_MS);
+  }
+
+  // UI wiring
+  sliderEl.addEventListener("input", () => { stopPlayback(); applyTimeline(Number(sliderEl.value)); });
+  playBtn.addEventListener("click", () => { if (!days.length) return; playing ? stopPlayback() : startPlayback(); });
+  document.getElementById("rewind").addEventListener("click", () => { stopPlayback(); sliderEl.value="0"; applyTimeline(0); });
+
+  elevEl.addEventListener("input", () => { setVals(); updateOverlay(); });
+  logToggleEl.addEventListener("change", () => { updateOverlay(); });
+
+  h3resEl.addEventListener("change", () => {
+    setVals();
+    // rebuild bins with new resolution so they remain stable
+    rebuildTimeline();
+  });
+
+  // Search removed
+
+  
+  document.getElementById("clear").addEventListener("click", () => {
+    stopPlayback();
+    allPoints=[]; filteredPoints=[]; days=[]; dayIndexByMs=new Map(); h3ByDay=[]; cellsNow=[];
+    fileEl.value="";
+    sliderEl.disabled=true; sliderEl.min="0"; sliderEl.max="0"; sliderEl.value="0";
+    timeLabelEl.textContent="—"; stepsLabelEl.textContent="0 steps"; shownPillEl.textContent="0 shown";
+    setStat("Cleared.");
+    updateOverlay();
+  });
+
+  document.getElementById("fit").addEventListener("click", () => {
+    const b = boundsFromPoints(filteredPoints);
+    if (!b) return;
+    const [minLon,minLat,maxLon,maxLat] = b;
+    map.fitBounds([[minLon, minLat], [maxLon, maxLat]], {padding: 60, duration: 600});
+  });
+
+  // Load file
+  fileEl.addEventListener("change", (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const geo = JSON.parse(reader.result);
+        const raw = extractPointsFromGeoJSON(geo);
+
+        if (!raw.length) {
+          setStat("Файл загрузился, но точек нет. Проверь, что GeoJSON содержит Point-геометрии.");
+          return;
+        }
+
+        allPoints = raw.map(p => {
+          const props = p.properties || {};
+          const ts = getProp(props, ["@timestamp", "timestamp"]);
+          const ms = ts ? parseTimestampToMs(ts) : null;
+          return {
+            coordinates: p.coordinates,
+            properties: props,
+            tDayMs: (ms != null) ? toDayMs(ms) : null
+          };
+        }).filter(p => Array.isArray(p.coordinates) && typeof p.coordinates[0] === "number" && typeof p.coordinates[1] === "number");
+
+        filteredPoints = [...allPoints];
+        rebuildTimeline();
+
+        const b = boundsFromPoints(filteredPoints);
+        if (b) {
+          const [minLon,minLat,maxLon,maxLat] = b;
+          map.fitBounds([[minLon, minLat], [maxLon, maxLat]], {padding: 60, duration: 600});
+        }
+
+        setVals();
+        updateOverlay();
+      } catch (err) {
+        console.error(err);
+        alert("Не удалось распарсить JSON/GeoJSON.");
+      }
+    };
+    reader.readAsText(f);
+  });
+
+    map.on("load", async () => {
+      setStat("Выбери uk-datacenters.geojson. Совет: log выключен = строго линейные высоты.");
+
+      // Всегда строим базовую сетку и показываем её с нулевыми значениями
+      try {
+        const res = Number(h3resEl.value);
+        await ensureBaseGrid(res);
+        cellsNow = stableCells; // все клетки UK (count=0)
+        updateOverlay();
+      } catch (e) {
+        console.warn("Base grid init failed:", e);
+        updateOverlay();
+      }
+    });
+
+</script>
+</body>
+</html>
