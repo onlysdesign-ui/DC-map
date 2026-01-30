@@ -141,8 +141,13 @@
       box-shadow: 0 14px 40px rgba(2, 6, 23, 0.7);
       padding: 10px 12px;
     }
-    .playerTopRow{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
-    .playerHeader{ display:flex; flex-direction:column; gap:4px; }
+    .playerMeta{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      margin-bottom:12px;
+      pointer-events:auto;
+    }
     .playerControls{ display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:center; margin-top:8px; }
     .playerSlider{ width:100%; margin:0; }
     .playerLabels{ display:flex; justify-content:space-between; gap:10px; font-size:12px; color:var(--ui-text); }
@@ -151,7 +156,7 @@
     .btnIcon{ width:38px; height:38px; border-radius:12px; padding:0; display:grid; place-items:center; }
     .btnPlayIcon{ width:46px; height:46px; border-radius:14px; padding:0; display:grid; place-items:center; font-size:16px; }
     .current-date {
-      font-size: 30px;
+      font-size: 18px;
       font-weight: 500;
       letter-spacing: 0.02em;
       color: var(--ui-text);
@@ -267,14 +272,11 @@
 
   <!-- Center-bottom player dock -->
   <div class="playerDock" aria-label="Timeline player">
+    <div class="playerMeta">
+      <span id="timeLabel" class="current-date">—</span>
+      <span class="current-subtitle">Data Center Expansion Map</span>
+    </div>
     <div class="playerCard">
-      <div class="playerTopRow">
-        <div class="playerHeader">
-          <span id="timeLabel" class="current-date">—</span>
-          <span class="current-subtitle">Data Center Expansion Map</span>
-        </div>
-      </div>
-
       <div class="playerControls">
         <button id="play" class="btn btnPlayIcon" type="button" aria-label="Play/Pause" title="Play/Pause">▶</button>
         <input id="slider" class="playerSlider" type="range" min="0" max="0" value="0" step="1" disabled />
