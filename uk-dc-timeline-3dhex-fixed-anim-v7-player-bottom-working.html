@@ -175,6 +175,12 @@
           <option value="aurora">Aurora (dark map)</option>
           <option value="ember">Ember (dark map)</option>
           <option value="ultraviolet">Ultraviolet (dark map)</option>
+          <option value="sunset">Sunset (dark map)</option>
+          <option value="rose">Rose Quartz (dark map)</option>
+          <option value="mint">Mint Glow (dark map)</option>
+          <option value="forest">Forest Green (dark map)</option>
+          <option value="ice">Ice Blue (dark map)</option>
+          <option value="lava">Lava Flow (dark map)</option>
         </select>
       </div>
 
@@ -345,6 +351,12 @@ const sliderEl = document.getElementById("slider");
   let lastGlowUpdate = 0;
   const GLOW_DURATION_MS = 1200;
   const GLOW_UPDATE_INTERVAL_MS = 70;
+  let pulseTicker = null;
+  let lastPulseUpdate = 0;
+  let pulseTick = 0;
+  const PULSE_UPDATE_INTERVAL_MS = 120;
+  const PULSE_SPEED_HZ = 0.6;
+  const PULSE_STRENGTH = 0.22;
 
   // Helpers
   function getProp(p, keys) { for (const k of keys) if (p && p[k] != null && p[k] !== "") return p[k]; return ""; }
@@ -494,12 +506,92 @@ function makeLayer() {
           [75, 60, 225]
         ],
         glow: [200, 150, 255]
+      },
+      sunset: {
+        label: "Sunset",
+        range: [
+          [255, 245, 235],
+          [255, 220, 210],
+          [255, 195, 190],
+          [255, 160, 160],
+          [255, 125, 135],
+          [235, 90, 130],
+          [205, 60, 120]
+        ],
+        glow: [255, 170, 190]
+      },
+      rose: {
+        label: "Rose Quartz",
+        range: [
+          [255, 245, 250],
+          [255, 220, 235],
+          [255, 195, 220],
+          [245, 160, 205],
+          [230, 125, 195],
+          [205, 95, 175],
+          [170, 70, 155]
+        ],
+        glow: [255, 180, 210]
+      },
+      mint: {
+        label: "Mint Glow",
+        range: [
+          [240, 255, 250],
+          [210, 255, 245],
+          [175, 255, 235],
+          [135, 245, 220],
+          [95, 225, 200],
+          [60, 200, 175],
+          [35, 170, 150]
+        ],
+        glow: [190, 255, 220]
+      },
+      forest: {
+        label: "Forest Green",
+        range: [
+          [235, 255, 245],
+          [205, 245, 220],
+          [175, 235, 195],
+          [140, 210, 170],
+          [105, 180, 140],
+          [80, 150, 120],
+          [55, 120, 100]
+        ],
+        glow: [170, 240, 200]
+      },
+      ice: {
+        label: "Ice Blue",
+        range: [
+          [245, 250, 255],
+          [215, 235, 255],
+          [185, 220, 255],
+          [155, 205, 255],
+          [120, 190, 255],
+          [85, 170, 245],
+          [60, 145, 230]
+        ],
+        glow: [180, 220, 255]
+      },
+      lava: {
+        label: "Lava Flow",
+        range: [
+          [255, 245, 230],
+          [255, 210, 170],
+          [255, 175, 120],
+          [255, 140, 90],
+          [255, 105, 70],
+          [235, 75, 50],
+          [200, 45, 40]
+        ],
+        glow: [255, 170, 120]
       }
     };
 
   const paletteKey = paletteEl?.value || "electric";
   const palette = palettes[paletteKey] || palettes.electric;
   const colorRange = palette.range;
+  const gradientTop = colorRange[0];
+  const gradientBottom = colorRange[colorRange.length - 1];
 
 const COLOR_CAP = 12; // 12+ будет просто самым насыщенным
     function colorFor(v) {
@@ -507,14 +599,19 @@ const COLOR_CAP = 12; // 12+ будет просто самым насыщенн
         const idx = Math.floor(t * (colorRange.length - 1));
       return colorRange[idx];
     }
+    const mixColor = (a, b, t) => ([
+      Math.round(a[0] + (b[0] - a[0]) * t),
+      Math.round(a[1] + (b[1] - a[1]) * t),
+      Math.round(a[2] + (b[2] - a[2]) * t)
+    ]);
 
   return new PolygonLayer({
     id: "h3-polygons",
     data: cellsNow, // [{cell, count}]
     updateTriggers: {
       getElevation: [frameTick, elevEl.value, logToggleEl.checked, h3resEl.value],
-      getFillColor: [frameTick, logToggleEl.checked, paletteKey],
-      getLineColor: [frameTick, logToggleEl.checked, paletteKey]
+      getFillColor: [frameTick, pulseTick, logToggleEl.checked, paletteKey],
+      getLineColor: [frameTick, pulseTick, logToggleEl.checked, paletteKey]
     },
     // h3 boundary -> polygon (lon/lat)
     getPolygon: d => {
@@ -541,21 +638,28 @@ getFillColor: d => {
   const v = transform(d.count);
   const [r, g, b] = colorFor(v);
   const now = performance.now();
+  const pulse = 0.5 + 0.5 * Math.sin(now / 1000 * Math.PI * 2 * PULSE_SPEED_HZ);
+  const heightT = Math.max(0, Math.min(1, v / COLOR_CAP));
+  const gradientT = Math.min(1, 0.25 + heightT * 0.6 + pulse * PULSE_STRENGTH);
+  const [gr0, gg0, gb0] = mixColor(gradientBottom, gradientTop, gradientT);
   const glow = d.glowUntil && d.glowUntil > now ? Math.max(0, (d.glowUntil - now) / GLOW_DURATION_MS) : 0;
-  const glowMix = Math.min(1, glow * 1.15);
+  const glowMix = Math.min(1, glow * 1.15 + pulse * 0.2);
   const [gr, gg, gb] = palette.glow;
+  const baseWithGradient = mixColor([r, g, b], [gr0, gg0, gb0], 0.55);
   const mix = (base, boost) => Math.round(base + (boost - base) * glowMix);
-  const alpha = Math.round(255 * (0.9 + glowMix * 0.1));
-  return [mix(r, gr), mix(g, gg), mix(b, gb), alpha];
+  const alpha = Math.round(255 * (0.86 + glowMix * 0.14));
+  return [mix(baseWithGradient[0], gr), mix(baseWithGradient[1], gg), mix(baseWithGradient[2], gb), alpha];
 },
 
 getLineColor: d => {
   // "точки" (контур) делаем полностью чёрными
   if (d.count === 0) return [0, 0, 0, 0];
   const now = performance.now();
+  const pulse = 0.5 + 0.5 * Math.sin(now / 1000 * Math.PI * 2 * PULSE_SPEED_HZ);
   const glow = d.glowUntil && d.glowUntil > now ? Math.max(0, (d.glowUntil - now) / GLOW_DURATION_MS) : 0;
-  const glowAlpha = Math.round(180 + glow * 70);
-  return [15, 20, 28, glowAlpha];
+  const glowAlpha = Math.round(140 + glow * 80 + pulse * 60);
+  const [gr, gg, gb] = palette.glow;
+  return [Math.round(gr * 0.15), Math.round(gg * 0.15), Math.round(gb * 0.15), glowAlpha];
 },
 
 lineWidthMinPixels: 1.5,
@@ -565,9 +669,9 @@ lineWidthMinPixels: 1.5,
     pickable: true,
     wireframe: false,
     material: {
-  ambient: 0.12,
-  diffuse: 0.55,
-  shininess: 80,
+  ambient: 0.15,
+  diffuse: 0.62,
+  shininess: 120,
   specularColor: [255, 255, 255]
 }
   });
@@ -733,6 +837,21 @@ seedRegistryFromPoints(filteredPoints, res);
     glowTicker = requestAnimationFrame(tick);
   }
 
+  function startPulseTicker() {
+    if (pulseTicker) return;
+    const tick = () => {
+      const now = performance.now();
+      if (now - lastPulseUpdate >= PULSE_UPDATE_INTERVAL_MS) {
+        pulseTick++;
+        frameTick++;
+        updateOverlay();
+        lastPulseUpdate = now;
+      }
+      pulseTicker = requestAnimationFrame(tick);
+    };
+    pulseTicker = requestAnimationFrame(tick);
+  }
+
   // Playback
   function stopPlayback() {
     playing = false;
@@ -841,9 +960,11 @@ seedRegistryFromPoints(filteredPoints, res);
         await ensureBaseGrid(res);
         cellsNow = stableCells; // все клетки UK (count=0)
         updateOverlay();
+        startPulseTicker();
       } catch (e) {
         console.warn("Base grid init failed:", e);
         updateOverlay();
+        startPulseTicker();
       }
     });
 
