@@ -1,143 +1,155 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>UK DC timeline (MapLibre + deck.gl + H3)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-Add gradient fill palette and fix highlight timing
-30 янв.
-·
-DC-map
-·
-main
+  <!-- MapLibre -->
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
 
-Архивировать
+  <!-- deck.gl -->
+  <script src="https://unpkg.com/deck.gl@8.9.36/dist.min.js"></script>
 
-Поделиться
-Посмотреть PR
+  <!-- H3 (stable hex indexing) -->
+  <script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
+<script src="https://unpkg.com/d3-ease@3"></script>
+    
+  <style>
+    html, body { margin:0; height:100%; background:#f6f8fc; font:14px system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    #container { position:relative; height:100%; }
+    #map { position:absolute; inset:0; }
 
-
-изображение прикрепленного пользователем файла
-Добавь новую палитру, чтобы заливка была градиентом как в примере. Вспыхивание - она должна подсвечиваться теплым желтым цветом. Если получится сделать такие же светящиеся грани у баров тоже будет круто
-И кажется сейчас подсветка происходит раньше анимации увеличения бара. поправь это тоже
-Копировать
-Summary
-
-Added the new Prismatic Gradient palette option with warm yellow glow/edge tinting and smooth gradient interpolation for fills.
-
-Delayed glow start to align after bar growth and blended glow into both fill and edge colors for the lighting effect.
-
-Сделанный снимок экрана
-
-Testing
-
-Not run (not requested).
-
-
-файл (1)
-сделай, еще палитру, чтобы все были одного цвета, ярко синего например, но при вырастании они сильно засвечивались в белый
-Копировать
-Summary
-
-Added a new “Mono Blue Glow” palette option with a uniform bright blue fill plus strong white glow/edge tint for highlight pops during growth.
-
-Screenshot attempt failed: Playwright timed out while loading the page, so I couldn’t capture an updated image.
-
-Testing
-
-Not run (not requested).
-
-
-файл (1)
-изображение прикрепленного пользователем файла
-изображение прикрепленного пользователем файла
-там конфликты. что с ними делать?
-Копировать
-Ниже — что делать с конфликтами в вашем PR и что должно остаться в финальном результате.
-
-✅ Что именно конфликтует
-На скриншоте видно два конфликта в одном файле uk-dc-timeline-3dhex-fixed-anim-v7-player-bottom-working.html:
-
-В списке палитр <select id="palette"> — надо оставить и Prismatic Gradient, и Mono Blue Glow. Финальный список должен выглядеть как в файле сейчас: обе опции присутствуют.
-
-В объекте palettes — должны остаться оба блока prismatic и monoBlue (то есть принять “both changes”). Финальная секция сейчас содержит оба блока и это правильное разрешение конфликта.
-
-✅ Как правильно разрешить конфликт в GitHub UI
-В каждой конфликтной секции нажмите “Accept both changes” (или вручную оставьте оба фрагмента).
-
-Убедитесь, что в итоге:
-
-В <select id="palette"> есть обе опции (prismatic и monoBlue).
-
-В palettes есть оба объекта: prismatic и monoBlue.
-
-Удалите все конфликт-маркеры (<<<<<<<, =======, >>>>>>>) и сохраните файл.
-
-Нажмите “Mark as resolved” → “Commit merge”.
-
-🔍 Локально конфликтов сейчас нет
-У меня локальный рабочий каталог чистый — конфликтов в репозитории нет.【cmd:git status --short】
-
-Если хотите, могу дать точный патч или помочь сразу сделать merge через Git CLI.
-
-Я случайно оставил только призматическу. Повтори изменения с моноблу пожалуйста. Так же переименуй название файла в индекс
-Копировать
-Summary
-
-Переименовал основной HTML файл в index.html, оставив оба варианта палитр (Prismatic и Mono Blue) в списке и в объекте palettes.
-
-Testing
-
-Not run (file rename only).
+    .panel {
+      position:absolute; z-index:1000; left:16px; top:16px;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: 12px 14px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 14px;
+      box-shadow: 0 14px 40px rgba(15, 23, 42, 0.12);
+      max-width: 480px;
+    }
+    .title { display:flex; align-items:center; justify-content: space-between; gap: 12px; }
+    .title h1 { font-size: 14px; margin: 0; font-weight: 650; color: #0f172a; }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .btn {
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      background:#fff; padding:7px 10px; border-radius:10px;
+      cursor:pointer; user-select:none; color:#0f172a;
+    }
+    input[type="text"]{
+      border:1px solid rgba(15,23,42,0.12);
+      padding:7px 10px; border-radius:10px;
+      width:220px; outline:none;
+    }
+    input[type="range"]{ width:100%; }
+    .pill{
+      display:inline-block; padding:3px 10px;
+      border:1px solid rgba(15,23,42,0.10);
+      border-radius:999px; background:rgba(255,255,255,0.9);
+      font-size:12px; color:#0f172a; white-space:nowrap;
+    }
+    .dot{ width:10px; height:10px; border-radius:999px;
+      background: rgb(38,124,255);
+      box-shadow:0 0 0 6px rgba(38,124,255,0.12);
+      display:inline-block; margin-right:8px;
+    }
+    .timeline { margin-top:10px; padding-top:10px; border-top:1px solid rgba(15,23,42,0.08); display:grid; gap:10px; }
+    .timeinfo{ display:flex; justify-content:space-between; gap:10px; font-size:12px; color:#0f172a; }
+    .twoCols{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .labelRow{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .muted{ color:#475569; font-size:12px; margin-top:8px; }
+    .stat{ margin-top:10px; font-size:12px; color:#0f172a; }
+    .select {
+      border:1px solid rgba(15,23,42,0.12);
+      background:#fff;
+      padding:7px 10px;
+      border-radius:10px;
+      color:#0f172a;
+      outline:none;
+    }
+  
+    /* Infographic feel: лёгкое свечение/смягчение именно для deck.gl слоя */
+    canvas.deckgl-overlay, .deckgl-overlay canvas {
+      filter:
+        drop-shadow(0 0 6px rgba(0, 125, 255, 0.22))
+        drop-shadow(0 0 18px rgba(0, 125, 255, 0.10));
+    }
 
 
-файл (1)
-изображение прикрепленного пользователем файла
-что делать?
-Копировать
-Ниже — что делать с конфликтами, которые GitHub показывает как “too complex to resolve in the web editor”. Это означает, что конфликт надо решать локально через Git, а потом пушить. Локально у меня конфликтов нет (рабочая директория чистая), так что вам нужно повторить шаги на своей машине или в CI/CLI окружении.【cmd:git status --short】
+    /* Player dock */
+    .playerDock{
+      position:absolute;
+      left:50%;
+      bottom:18px;
+      transform:translateX(-50%);
+      z-index:1200;
+      pointer-events:none; /* allow map interactions around it */
+      width:min(720px, calc(100vw - 40px));
+    }
+    .playerCard{
+      pointer-events:auto;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(15, 23, 42, 0.10);
+      border-radius: 16px;
+      box-shadow: 0 14px 40px rgba(15, 23, 42, 0.18);
+      padding: 10px 12px;
+    }
+    .playerTopRow{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .playerSlider{ width:100%; margin:8px 0 6px; }
+    .playerLabels{ display:flex; justify-content:space-between; gap:10px; font-size:12px; color:#0f172a; }
+    .pillGhost{ opacity:0.8; }
+    .pillBig{ font-size:12px; padding:4px 12px; }
+    .btnIcon{ width:38px; height:38px; border-radius:12px; padding:0; display:grid; place-items:center; }
+    .btnPlayIcon{ width:46px; height:46px; border-radius:14px; padding:0; display:grid; place-items:center; font-size:16px; }
+      .current-date {
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  color: #000;
 
-✅ Что делать (локально, через CLI)
-1) Переключитесь на ветку PR
-git checkout <your-branch>
-2) Обновите base-ветку
-git fetch origin
-3) Влейте изменения из main (или rebase)
-Вариант A — merge:
+  /* убираем всё "UI-шное" */
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
 
-git merge origin/main
-Вариант B — rebase (чище история):
+  /* чуть воздуха */
+  line-height: 1.2;
+}
+</style>
+</head>
 
-git rebase origin/main
-✅ Если конфликтов много — решайте вручную
-Git откроет конфликтующие файлы. В вашем случае это, вероятно, один HTML файл, который переименован в index.html и содержит палитры (prismatic и monoBlue).
+<body>
+<div id="container">
+  <div id="map"></div>
 
-Что оставить:
+  <div class="panel">
+    <div class="title">
+      <h1><span class="dot"></span>Data centers timeline (3D hex)</h1>
+      <span id="shownPill" class="pill">0 shown</span>
+    </div>
 
-Обе опции палитр в <select>
-
-Оба блока prismatic и monoBlue в palettes
-
-✅ После правок
-git add .
-git commit
-Если был rebase, завершите:
-
-git rebase --continue
-✅ Затем push
-git push
-Почему GitHub UI не даёт решить?
-Потому что GitHub не умеет автоматически разрешать сложные конфликты, особенно когда файл переименован + в нём большие правки.
-
-Если хотите — покажите мне текст конфликта, и я дам точный вариант “как должно быть после merge”.
-
-
-
-
-Разница
-Журналы
-
-uk-dc-timeline-3dhex-fixed-anim-v7-player-bottom-working.html → index.html
-uk-dc-timeline-3dhex-fixed-anim-v7-player-bottom-working.html → index.html
-+71
--8
-
-@@ -153,50 +153,52 @@
+    <div class="row" style="margin-top:10px;">
+      <input id="file" type="file" accept=".geojson,.json" class="btn">
+      <button id="clear" class="btn" type="button">Clear</button>
+      <button id="fit" class="btn" type="button">Fit</button>
+    </div>
+<div class="settings">
+      <div class="twoCols">
+        <div>
+          <div class="labelRow">
+            <span class="pill">H3 resolution</span>
+            <span id="resVal" class="pill">6</span>
+          </div>
+          <select id="h3res" class="select">
+            <option value="5">5 (coarse)</option>
             <option value="6" selected>6 (default)</option>
             <option value="7">7 (detailed)</option>
             <option value="8">8 (very detailed)</option>
@@ -190,7 +202,125 @@ uk-dc-timeline-3dhex-fixed-anim-v7-player-bottom-working.html → index.html
         <button id="play" class="btn btnPlayIcon" type="button" aria-label="Play/Pause" title="Play/Pause">▶</button>
       </div>
 
-@@ -322,50 +324,51 @@ const sliderEl = document.getElementById("slider");
+      <input id="slider" class="playerSlider" type="range" min="0" max="0" value="0" step="1" disabled />
+
+      <div class="playerLabels">
+        <span id="startLabel" class="pill pillGhost">—</span>
+        <span id="stepsLabel" class="pill pillGhost">0 steps</span>
+        <span id="endLabel" class="pill pillGhost">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const {MapboxOverlay, PolygonLayer} = deck;
+  const h3 = window.h3 || window.h3js;
+    if (!h3) {
+      throw new Error("h3-js не загрузился (нет window.h3 / window.h3js)");
+    }
+
+  // Basemap style
+const STYLE_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+
+  const map = new maplibregl.Map({
+    container: "map",
+    style: STYLE_URL,
+    center: [-3.0, 54.5],
+    zoom: 5.8,
+    pitch: 68,
+    bearing: -12,
+    antialias: true
+  });
+  map.addControl(new maplibregl.NavigationControl({showCompass: true}), "top-right");
+
+  // UI
+  const statEl = document.getElementById("stat");
+  const fileEl = document.getElementById("file");
+const sliderEl = document.getElementById("slider");
+  const timeLabelEl = document.getElementById("timeLabel");
+  const stepsLabelEl = document.getElementById("stepsLabel");
+  const shownPillEl = document.getElementById("shownPill");
+  const playBtn = document.getElementById("play");
+  const elevEl = document.getElementById("elev");
+  const elevValEl = document.getElementById("elevVal");
+  const logToggleEl = document.getElementById("logToggle");
+  const h3resEl = document.getElementById("h3res");
+  const resValEl = document.getElementById("resVal");
+  const paletteEl = document.getElementById("palette");
+  const paletteValEl = document.getElementById("paletteVal");
+
+  function setStat(t){ if (statEl) statEl.textContent = t || ""; }
+  function setVals(){
+    elevValEl.textContent = `x${Number(elevEl.value)}`;
+    resValEl.textContent = String(h3resEl.value);
+    if (paletteValEl) {
+      const selected = paletteEl?.selectedOptions?.[0];
+      paletteValEl.textContent = selected ? selected.textContent.replace(" (dark map)", "") : "—";
+    }
+  }
+  setVals();
+
+  // Data:
+  // point: {coordinates:[lon,lat], properties, tDayMs}
+  let allPoints = [];
+  let filteredPoints = [];
+
+  // timeline days (UTC day)
+  let days = [];
+  let dayIndexByMs = new Map();
+
+  // accumulative counts per day: Array<Map<h3Cell, count>>
+  let h3ByDay = [];
+
+  // layer data for current frame: [{cell, count}]
+  let cellsNow = [];
+  // Stable registry: cell -> object reused across frames
+    const cellRegistry = new Map(); // cell -> {cell, count}
+    let stableCells = [];           // stable array passed to deck.gl
+  
+
+  // Base grid (so 0-count hexes still render)
+  const UK_GEOJSON_URL = "https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson";
+  let ukFeature = null;                 // GeoJSON feature for UK
+  const baseGridByRes = new Map();      // res -> array of h3 cell ids
+  let buildToken = 0;
+
+  async function ensureUKFeature() {
+    if (ukFeature) return ukFeature;
+    const r = await fetch(UK_GEOJSON_URL);
+    if (!r.ok) throw new Error("Failed to fetch UK GeoJSON: " + r.status);
+    const gj = await r.json();
+    const f = gj.features.find(ft => {
+      const nm = (ft.properties?.ADMIN || ft.properties?.name || "").toLowerCase();
+      return nm === "united kingdom";
+    });
+    if (!f) throw new Error("UK feature not found in countries.geojson");
+    ukFeature = f;
+    return ukFeature;
+  }
+                  
+  function seedRegistryFromPoints(points, res) {
+  for (const p of points) {
+    const [lon, lat] = p.coordinates || [];
+    if (typeof lon !== "number" || typeof lat !== "number") continue;
+
+    const cell = h3.latLngToCell(lat, lon, res);
+    if (!cellRegistry.has(cell)) cellRegistry.set(cell, { cell, count: 0 });
+  }
+  stableCells = Array.from(cellRegistry.values());
+}
+
+  function swapLonLatToLatLon(geom) {
+    // GeoJSON uses [lon,lat]; h3-js expects [lat,lon]
+    if (geom.type === "Polygon") {
+      return { type: "Polygon", coordinates: geom.coordinates.map(ring => ring.map(([lon, lat]) => [lat, lon])) };
+    }
+    if (geom.type === "MultiPolygon") {
+      return { type: "MultiPolygon", coordinates: geom.coordinates.map(poly => poly.map(ring => ring.map(([lon, lat]) => [lat, lon]))) };
+    }
+    throw new Error("Unsupported geometry type: " + geom.type);
+  }
 
   async function ensureBaseGrid(res) {
     if (baseGridByRes.has(res)) return baseGridByRes.get(res);
@@ -242,7 +372,106 @@ uk-dc-timeline-3dhex-fixed-anim-v7-player-bottom-working.html → index.html
       }
     }
     return pts;
-@@ -472,112 +475,171 @@ function makeLayer() {
+  }
+  function boundsFromPoints(points) {
+    let minLon = 180, minLat = 90, maxLon = -180, maxLat = -90, ok = false;
+    for (const p of points) {
+      const [lon, lat] = p.coordinates || [];
+      if (typeof lon !== "number" || typeof lat !== "number") continue;
+      ok = true;
+      minLon = Math.min(minLon, lon); maxLon = Math.max(maxLon, lon);
+      minLat = Math.min(minLat, lat); maxLat = Math.max(maxLat, lat);
+    }
+    return ok ? [minLon, minLat, maxLon, maxLat] : null;
+  }
+    
+    function bboxToLatLonPolygon(b, padDeg = 0.6) {
+  const [minLon, minLat, maxLon, maxLat] = b;
+  const a = minLon - padDeg, btm = minLat - padDeg;
+  const c = maxLon + padDeg, top = maxLat + padDeg;
+
+  // h3-js polygonToCells ждёт [lat, lon]
+  return {
+    type: "Polygon",
+    coordinates: [[
+      [btm, a],
+      [btm, c],
+      [top, c],
+      [top, a],
+      [btm, a]
+    ]]
+  };
+}
+
+async function ensureBaseGridFromPoints(res) {
+  const b = boundsFromPoints(filteredPoints.length ? filteredPoints : allPoints);
+  if (!b) return [];
+
+  const poly = bboxToLatLonPolygon(b, 0.8); // pad можно увеличить
+  const cells = h3.polygonToCells(poly, res);
+
+  // регистрируем все клетки в реестре как стабильные объекты count=0
+  for (const cell of cells) {
+    if (!cellRegistry.has(cell)) cellRegistry.set(cell, { cell, count: 0 });
+  }
+  stableCells = Array.from(cellRegistry.values());
+  return cells;
+}
+
+
+  // Overlay
+  const overlay = new MapboxOverlay({layers: []});
+  map.addControl(overlay);
+
+function makeLayer() {
+  const elevationScale = Number(elevEl.value); // высота за 1 DC
+  const useLog = !!logToggleEl.checked;
+  const transform = (n) => useLog ? Math.log1p(n) : n;
+    
+    const BASE_ELEV = 0.18; // минимальная высота (до умножения на elevationScale)
+    const FILL_ALPHA = 255; // полностью непрозрачные бары
+    const LINE_ALPHA = 90;  // контур чуть мягче
+    const LINE_WIDTH = 1.3; // px
+    const palettes = {
+      electric: {
+        label: "Electric Blue",
+        range: [
+          [255, 255, 255],
+          [210, 235, 255],
+          [160, 210, 255],
+          [110, 185, 255],
+          [60, 160, 255],
+          [20, 135, 255],
+          [0, 105, 255]
+        ],
+        glow: [120, 220, 255]
+      },
+      neon: {
+        label: "Neon Cyan",
+        range: [
+          [235, 255, 255],
+          [180, 255, 248],
+          [120, 255, 240],
+          [60, 245, 235],
+          [0, 225, 230],
+          [0, 190, 210],
+          [0, 150, 190]
+        ],
+        glow: [120, 255, 250]
+      },
+      aurora: {
+        label: "Aurora",
+        range: [
+          [255, 250, 255],
+          [210, 240, 255],
+          [160, 235, 220],
+          [115, 235, 170],
+          [80, 215, 140],
+          [60, 185, 190],
+          [80, 140, 230]
+        ],
+        glow: [180, 255, 200]
+      },
       ember: {
         label: "Ember",
         range: [
@@ -414,7 +643,93 @@ lineWidthMinPixels: 1.5,
   // Timeline build (stable hex bins)
   async function rebuildTimeline() {
     stopPlayback();
-@@ -671,51 +733,52 @@ seedRegistryFromPoints(filteredPoints, res);
+    const token = ++buildToken;
+
+    // Rebuild stable registry from scratch on every timeline rebuild.
+    // This prevents new hex objects from being created mid-playback (which would "pop" in).
+    cellRegistry.clear();
+    stableCells = [];
+
+    // collect unique days
+    const daySet = new Set();
+    for (const p of filteredPoints) if (p.tDayMs != null) daySet.add(p.tDayMs);
+    days = Array.from(daySet).sort((a,b)=>a-b);
+
+    if (!days.length) {
+      sliderEl.disabled = true;
+      sliderEl.min = "0"; sliderEl.max = "0"; sliderEl.value = "0";
+      timeLabelEl.textContent = "—";
+      stepsLabelEl.textContent = "0 steps";
+      shownPillEl.textContent = "0 shown";
+      // вместо пустоты показываем базовую сетку UK
+       try {
+          const res = Number(h3resEl.value);
+           // ВАЖНО: чтобы новые гексы не "появлялись", а росли 0→N,
+// регистрируем все ячейки, которые могут возникнуть из данных.
+seedRegistryFromPoints(filteredPoints, res);
+          await ensureBaseGridFromPoints(res);
+          cellsNow = stableCells;
+        } catch (e) {
+          console.warn("Base grid (bbox) failed:", e);
+          cellsNow = [];
+        }
+
+      updateOverlay();
+      setStat("Нет @timestamp в данных (или он не распарсился). Нужен properties['@timestamp'] из Overpass meta.");
+      return;
+    }
+
+    // index days
+    dayIndexByMs = new Map(days.map((ms, i) => [ms, i]));
+
+    // prepare accumulative maps
+    h3ByDay = Array.from({length: days.length}, () => new Map());
+
+    const res = Number(h3resEl.value);
+
+    // Pre-register all cells that can appear, so elevation transitions work as 0→N instead of popping in.
+    seedRegistryFromPoints(filteredPoints, res);
+
+    // base grid from points bbox (no external fetch)
+    try {
+      await ensureBaseGridFromPoints(res);
+    } catch (e) {
+      console.warn("Base grid (bbox) failed:", e);
+    }
+
+    if (token !== buildToken) return;
+
+    // fill accumulative counts
+    for (const p of filteredPoints) {
+      if (p.tDayMs == null) continue;
+
+      const idx = dayIndexByMs.get(p.tDayMs);
+      if (idx == null) continue;
+
+      const [lon, lat] = p.coordinates;
+      const cell = h3.latLngToCell(lat, lon, res);
+
+      // add this point to its day and all future days (accumulative)
+      for (let j = idx; j < days.length; j++) {
+        const m = h3ByDay[j];
+        m.set(cell, (m.get(cell) || 0) + 1);
+      }
+    }
+
+    sliderEl.disabled = false;
+    sliderEl.min = "0";
+    sliderEl.max = String(days.length - 1);
+    sliderEl.value = "0";
+    stepsLabelEl.textContent = `${days.length} steps`;
+    const startEl = document.getElementById("startLabel");
+    const endEl = document.getElementById("endLabel");
+    if (startEl) startEl.textContent = fmtDay(days[0]);
+    if (endEl) endEl.textContent = fmtDay(days[days.length-1]);
+
+    applyTimeline(0);
+
+    setStat(`Points: ${allPoints.length}. After search: ${filteredPoints.length}. Timeline steps: ${days.length} (by day). H3 res: ${res}.`);
+    console.log("days:", days.length, "cellsNow sample:", cellsNow.slice(0,3));
 
   }
 
@@ -467,7 +782,111 @@ lineWidthMinPixels: 1.5,
     if (glowTicker) return;
     const tick = () => {
       const now = performance.now();
-@@ -827,26 +890,26 @@ seedRegistryFromPoints(filteredPoints, res);
+      if (now - lastGlowUpdate >= GLOW_UPDATE_INTERVAL_MS) {
+        frameTick++;
+        updateOverlay();
+        lastGlowUpdate = now;
+      }
+      if (now < glowActiveUntil) {
+        glowTicker = requestAnimationFrame(tick);
+      } else {
+        glowTicker = null;
+      }
+    };
+    glowTicker = requestAnimationFrame(tick);
+  }
+
+  // Playback
+  function stopPlayback() {
+    playing = false;
+    playBtn.textContent = "▶";
+    if (timer) { clearInterval(timer); timer = null; }
+  }
+  function startPlayback() {
+    if (!days.length) return;
+    playing = true;
+    playBtn.textContent = "❚❚";
+    timer = setInterval(() => {
+      const v = Number(sliderEl.value);
+      if (v >= days.length - 1) { stopPlayback(); return; }
+      sliderEl.value = String(v + 1);
+      applyTimeline(Number(sliderEl.value));
+    }, PLAY_INTERVAL_MS);
+  }
+
+  // UI wiring
+  sliderEl.addEventListener("input", () => { stopPlayback(); applyTimeline(Number(sliderEl.value)); });
+  playBtn.addEventListener("click", () => { if (!days.length) return; playing ? stopPlayback() : startPlayback(); });
+  document.getElementById("rewind").addEventListener("click", () => { stopPlayback(); sliderEl.value="0"; applyTimeline(0); });
+
+  elevEl.addEventListener("input", () => { setVals(); updateOverlay(); });
+  logToggleEl.addEventListener("change", () => { updateOverlay(); });
+  paletteEl.addEventListener("change", () => { setVals(); updateOverlay(); });
+
+  h3resEl.addEventListener("change", () => {
+    setVals();
+    // rebuild bins with new resolution so they remain stable
+    rebuildTimeline();
+  });
+
+  // Search removed
+
+  
+  document.getElementById("clear").addEventListener("click", () => {
+    stopPlayback();
+    allPoints=[]; filteredPoints=[]; days=[]; dayIndexByMs=new Map(); h3ByDay=[]; cellsNow=[];
+    fileEl.value="";
+    sliderEl.disabled=true; sliderEl.min="0"; sliderEl.max="0"; sliderEl.value="0";
+    timeLabelEl.textContent="—"; stepsLabelEl.textContent="0 steps"; shownPillEl.textContent="0 shown";
+    setStat("Cleared.");
+    updateOverlay();
+  });
+
+  document.getElementById("fit").addEventListener("click", () => {
+    const b = boundsFromPoints(filteredPoints);
+    if (!b) return;
+    const [minLon,minLat,maxLon,maxLat] = b;
+    map.fitBounds([[minLon, minLat], [maxLon, maxLat]], {padding: 60, duration: 600});
+  });
+
+  // Load file
+  fileEl.addEventListener("change", (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const geo = JSON.parse(reader.result);
+        const raw = extractPointsFromGeoJSON(geo);
+
+        if (!raw.length) {
+          setStat("Файл загрузился, но точек нет. Проверь, что GeoJSON содержит Point-геометрии.");
+          return;
+        }
+
+        allPoints = raw.map(p => {
+          const props = p.properties || {};
+          const ts = getProp(props, ["@timestamp", "timestamp"]);
+          const ms = ts ? parseTimestampToMs(ts) : null;
+          return {
+            coordinates: p.coordinates,
+            properties: props,
+            tDayMs: (ms != null) ? toDayMs(ms) : null
+          };
+        }).filter(p => Array.isArray(p.coordinates) && typeof p.coordinates[0] === "number" && typeof p.coordinates[1] === "number");
+
+        filteredPoints = [...allPoints];
+        rebuildTimeline();
+
+        const b = boundsFromPoints(filteredPoints);
+        if (b) {
+          const [minLon,minLat,maxLon,maxLat] = b;
+          map.fitBounds([[minLon, minLat], [maxLon, maxLat]], {padding: 60, duration: 600});
+        }
+
+        setVals();
+        updateOverlay();
       } catch (err) {
         console.error(err);
         alert("Не удалось распарсить JSON/GeoJSON.");
