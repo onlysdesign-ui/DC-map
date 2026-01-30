@@ -141,6 +141,13 @@
       <button id="clear" class="btn" type="button">Clear</button>
       <button id="fit" class="btn" type="button">Fit</button>
     </div>
+    <div class="row" style="margin-top:8px;">
+      <select id="serverFile" class="select" aria-label="Server data">
+        <option value="DC-UK.geojson" selected>DC-UK.geojson (server)</option>
+        <option value="DC-global.geojson">DC-global.geojson (server)</option>
+      </select>
+      <button id="loadServer" class="btn" type="button">Load from server</button>
+    </div>
 <div class="settings">
       <div class="twoCols">
         <div>
@@ -167,16 +174,15 @@
       <div style="margin-top:10px;">
         <div class="labelRow">
           <span class="pill">Palette</span>
-          <span id="paletteVal" class="pill">Electric Blue</span>
+          <span id="paletteVal" class="pill">Monoblu</span>
         </div>
         <select id="palette" class="select" style="width:100%;">
-          <option value="electric" selected>Electric Blue (dark map)</option>
-          <option value="neon">Neon Cyan (dark map)</option>
-          <option value="aurora">Aurora (dark map)</option>
-          <option value="ember">Ember (dark map)</option>
-          <option value="ultraviolet">Ultraviolet (dark map)</option>
-          <option value="prismatic">Prismatic Gradient (dark map)</option>
-          <option value="monoBlue">Mono Blue Glow (dark map)</option>
+          <option value="monoblue" selected>Monoblu (dark map)</option>
+          <option value="monoIce">Monoblu Ice (dark map)</option>
+          <option value="monoDeep">Monoblu Deep (dark map)</option>
+          <option value="monoNeon">Monoblu Neon (dark map)</option>
+          <option value="monoRoyal">Monoblu Royal (dark map)</option>
+          <option value="monoSoft">Monoblu Soft (dark map)</option>
         </select>
       </div>
 
@@ -249,6 +255,7 @@ const sliderEl = document.getElementById("slider");
   const resValEl = document.getElementById("resVal");
   const paletteEl = document.getElementById("palette");
   const paletteValEl = document.getElementById("paletteVal");
+  const serverFileEl = document.getElementById("serverFile");
 
   function setStat(t){ if (statEl) statEl.textContent = t || ""; }
   function setVals(){
@@ -433,104 +440,94 @@ function makeLayer() {
     const LINE_ALPHA = 90;  // контур чуть мягче
     const LINE_WIDTH = 1.3; // px
     const palettes = {
-      electric: {
-        label: "Electric Blue",
+      monoblue: {
+        label: "Monoblu",
         range: [
-          [255, 255, 255],
-          [210, 235, 255],
-          [160, 210, 255],
-          [110, 185, 255],
-          [60, 160, 255],
-          [20, 135, 255],
-          [0, 105, 255]
+          [10, 40, 95],
+          [20, 70, 140],
+          [30, 100, 185],
+          [40, 130, 220],
+          [60, 165, 245],
+          [90, 195, 255],
+          [130, 225, 255]
         ],
-        glow: [120, 220, 255]
+        glow: [160, 235, 255],
+        edge: [18, 34, 58]
       },
-      neon: {
-        label: "Neon Cyan",
+      monoIce: {
+        label: "Monoblu Ice",
         range: [
-          [235, 255, 255],
-          [180, 255, 248],
-          [120, 255, 240],
-          [60, 245, 235],
-          [0, 225, 230],
-          [0, 190, 210],
-          [0, 150, 190]
+          [200, 240, 255],
+          [170, 230, 255],
+          [130, 215, 255],
+          [95, 195, 255],
+          [70, 170, 245],
+          [50, 145, 225],
+          [35, 120, 205]
         ],
-        glow: [120, 255, 250]
+        glow: [220, 255, 255],
+        edge: [180, 210, 230]
       },
-      aurora: {
-        label: "Aurora",
+      monoDeep: {
+        label: "Monoblu Deep",
         range: [
-          [255, 250, 255],
-          [210, 240, 255],
-          [160, 235, 220],
-          [115, 235, 170],
-          [80, 215, 140],
-          [60, 185, 190],
-          [80, 140, 230]
+          [4, 16, 48],
+          [8, 28, 72],
+          [12, 40, 96],
+          [16, 60, 128],
+          [26, 80, 160],
+          [38, 105, 190],
+          [58, 130, 215]
         ],
-        glow: [180, 255, 200]
+        glow: [120, 190, 255],
+        edge: [6, 12, 26]
       },
-      ember: {
-        label: "Ember",
+      monoNeon: {
+        label: "Monoblu Neon",
         range: [
-          [255, 245, 235],
-          [255, 220, 190],
-          [255, 190, 140],
-          [255, 150, 90],
-          [245, 115, 60],
-          [225, 80, 40],
-          [200, 45, 30]
+          [5, 70, 150],
+          [0, 110, 200],
+          [0, 150, 230],
+          [0, 185, 255],
+          [35, 210, 255],
+          [80, 235, 255],
+          [130, 255, 255]
         ],
-        glow: [255, 190, 120]
+        glow: [160, 255, 255],
+        edge: [0, 80, 160]
       },
-      ultraviolet: {
-        label: "Ultraviolet",
+      monoRoyal: {
+        label: "Monoblu Royal",
         range: [
-          [250, 240, 255],
-          [220, 205, 255],
-          [190, 170, 255],
-          [160, 135, 255],
-          [130, 110, 255],
-          [100, 85, 245],
-          [75, 60, 225]
+          [30, 35, 100],
+          [40, 55, 140],
+          [55, 75, 180],
+          [70, 95, 210],
+          [90, 120, 235],
+          [120, 150, 255],
+          [160, 190, 255]
         ],
-        glow: [200, 150, 255]
+        glow: [190, 215, 255],
+        edge: [28, 34, 90]
       },
-      prismatic: {
-        label: "Prismatic Gradient",
-        gradient: true,
+      monoSoft: {
+        label: "Monoblu Soft",
         range: [
-          [18, 110, 255],
-          [0, 190, 255],
-          [120, 240, 255],
-          [200, 170, 255],
-          [255, 140, 210],
-          [255, 185, 120],
-          [255, 220, 160]
+          [210, 230, 255],
+          [180, 210, 250],
+          [150, 195, 245],
+          [120, 175, 235],
+          [95, 155, 225],
+          [70, 135, 210],
+          [55, 115, 190]
         ],
-        glow: [255, 210, 140],
-        edge: [255, 235, 190]
-      },
-      monoBlue: {
-        label: "Mono Blue Glow",
-        range: [
-          [0, 140, 255],
-          [0, 140, 255],
-          [0, 140, 255],
-          [0, 140, 255],
-          [0, 140, 255],
-          [0, 140, 255],
-          [0, 140, 255]
-        ],
-        glow: [255, 255, 255],
-        edge: [220, 240, 255]
+        glow: [210, 240, 255],
+        edge: [150, 180, 210]
       }
     };
 
-  const paletteKey = paletteEl?.value || "electric";
-  const palette = palettes[paletteKey] || palettes.electric;
+  const paletteKey = paletteEl?.value || "monoblue";
+  const palette = palettes[paletteKey] || palettes.monoblue;
   const colorRange = palette.range;
 
 const COLOR_CAP = 12; // 12+ будет просто самым насыщенным
@@ -849,7 +846,42 @@ seedRegistryFromPoints(filteredPoints, res);
     map.fitBounds([[minLon, minLat], [maxLon, maxLat]], {padding: 60, duration: 600});
   });
 
-  // Load file
+  function loadGeoJSONData(geo, sourceLabel) {
+    const raw = extractPointsFromGeoJSON(geo);
+
+    if (!raw.length) {
+      setStat("Файл загрузился, но точек нет. Проверь, что GeoJSON содержит Point-геометрии.");
+      return;
+    }
+
+    allPoints = raw.map(p => {
+      const props = p.properties || {};
+      const ts = getProp(props, ["@timestamp", "timestamp"]);
+      const ms = ts ? parseTimestampToMs(ts) : null;
+      return {
+        coordinates: p.coordinates,
+        properties: props,
+        tDayMs: (ms != null) ? toDayMs(ms) : null
+      };
+    }).filter(p => Array.isArray(p.coordinates) && typeof p.coordinates[0] === "number" && typeof p.coordinates[1] === "number");
+
+    filteredPoints = [...allPoints];
+    rebuildTimeline();
+
+    const b = boundsFromPoints(filteredPoints);
+    if (b) {
+      const [minLon,minLat,maxLon,maxLat] = b;
+      map.fitBounds([[minLon, minLat], [maxLon, maxLat]], {padding: 60, duration: 600});
+    }
+
+    setVals();
+    updateOverlay();
+    if (sourceLabel) {
+      setStat(`Loaded: ${sourceLabel}. Points: ${allPoints.length}.`);
+    }
+  }
+
+  // Load file from local computer
   fileEl.addEventListener("change", (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
@@ -858,41 +890,28 @@ seedRegistryFromPoints(filteredPoints, res);
     reader.onload = () => {
       try {
         const geo = JSON.parse(reader.result);
-        const raw = extractPointsFromGeoJSON(geo);
-
-        if (!raw.length) {
-          setStat("Файл загрузился, но точек нет. Проверь, что GeoJSON содержит Point-геометрии.");
-          return;
-        }
-
-        allPoints = raw.map(p => {
-          const props = p.properties || {};
-          const ts = getProp(props, ["@timestamp", "timestamp"]);
-          const ms = ts ? parseTimestampToMs(ts) : null;
-          return {
-            coordinates: p.coordinates,
-            properties: props,
-            tDayMs: (ms != null) ? toDayMs(ms) : null
-          };
-        }).filter(p => Array.isArray(p.coordinates) && typeof p.coordinates[0] === "number" && typeof p.coordinates[1] === "number");
-
-        filteredPoints = [...allPoints];
-        rebuildTimeline();
-
-        const b = boundsFromPoints(filteredPoints);
-        if (b) {
-          const [minLon,minLat,maxLon,maxLat] = b;
-          map.fitBounds([[minLon, minLat], [maxLon, maxLat]], {padding: 60, duration: 600});
-        }
-
-        setVals();
-        updateOverlay();
+        loadGeoJSONData(geo, f.name);
       } catch (err) {
         console.error(err);
         alert("Не удалось распарсить JSON/GeoJSON.");
       }
     };
     reader.readAsText(f);
+  });
+
+  // Load file from server
+  document.getElementById("loadServer").addEventListener("click", async () => {
+    const fileName = serverFileEl?.value;
+    if (!fileName) return;
+    try {
+      const res = await fetch(fileName, {cache: "no-store"});
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const geo = await res.json();
+      loadGeoJSONData(geo, `server/${fileName}`);
+    } catch (err) {
+      console.error(err);
+      alert("Не удалось загрузить файл с сервера.");
+    }
   });
 
     map.on("load", async () => {
