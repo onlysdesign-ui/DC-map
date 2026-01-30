@@ -171,23 +171,17 @@
       <div style="margin-top:10px;">
         <div class="labelRow">
           <span class="pill">Palette</span>
-          <span id="paletteVal" class="pill">Monoblu</span>
+          <span id="paletteVal" class="pill">Gradient Sunrise</span>
         </div>
         <select id="palette" class="select" style="width:100%;">
-          <optgroup label="Monoblu (classic)">
-            <option value="monoblue" selected>Monoblu (dark map)</option>
-            <option value="monoIce">Monoblu Ice (dark map)</option>
-            <option value="monoDeep">Monoblu Deep (dark map)</option>
-            <option value="monoNeon">Monoblu Neon (dark map)</option>
-            <option value="monoRoyal">Monoblu Royal (dark map)</option>
-            <option value="monoSoft">Monoblu Soft (dark map)</option>
-          </optgroup>
           <optgroup label="Gradient bottom-up (fixed)">
-            <option value="gradSunrise">Gradient Sunrise</option>
+            <option value="gradSunrise" selected>Gradient Sunrise</option>
             <option value="gradEmerald">Gradient Emerald</option>
             <option value="gradMagenta">Gradient Magenta</option>
             <option value="gradCitrus">Gradient Citrus</option>
             <option value="gradRuby">Gradient Ruby</option>
+            <option value="gradSky">Gradient Голубой</option>
+            <option value="gradBlue">Gradient Синий</option>
           </optgroup>
           <optgroup label="Mono (contrast for dark map)">
             <option value="solidAmber">Mono Amber</option>
@@ -195,6 +189,8 @@
             <option value="solidMint">Mono Mint</option>
             <option value="solidViolet">Mono Violet</option>
             <option value="solidLime">Mono Lime</option>
+            <option value="solidSky">Mono Голубой</option>
+            <option value="solidBlue">Mono Синий</option>
           </optgroup>
           <optgroup label="Height-dependent gradients">
             <option value="heightHeat">Height Heat</option>
@@ -202,6 +198,8 @@
             <option value="heightPlasma">Height Plasma</option>
             <option value="heightCopper">Height Copper</option>
             <option value="heightIcefire">Height Icefire</option>
+            <option value="heightSky">Height Голубой</option>
+            <option value="heightBlue">Height Синий</option>
           </optgroup>
         </select>
       </div>
@@ -459,90 +457,6 @@ function makeLayer() {
     const LINE_ALPHA = 90;  // контур чуть мягче
     const LINE_WIDTH = 1.3; // px
     const palettes = {
-      monoblue: {
-        label: "Monoblu",
-        range: [
-          [10, 40, 95],
-          [20, 70, 140],
-          [30, 100, 185],
-          [40, 130, 220],
-          [60, 165, 245],
-          [90, 195, 255],
-          [130, 225, 255]
-        ],
-        glow: [160, 235, 255],
-        edge: [18, 34, 58]
-      },
-      monoIce: {
-        label: "Monoblu Ice",
-        range: [
-          [200, 240, 255],
-          [170, 230, 255],
-          [130, 215, 255],
-          [95, 195, 255],
-          [70, 170, 245],
-          [50, 145, 225],
-          [35, 120, 205]
-        ],
-        glow: [220, 255, 255],
-        edge: [180, 210, 230]
-      },
-      monoDeep: {
-        label: "Monoblu Deep",
-        range: [
-          [4, 16, 48],
-          [8, 28, 72],
-          [12, 40, 96],
-          [16, 60, 128],
-          [26, 80, 160],
-          [38, 105, 190],
-          [58, 130, 215]
-        ],
-        glow: [120, 190, 255],
-        edge: [6, 12, 26]
-      },
-      monoNeon: {
-        label: "Monoblu Neon",
-        range: [
-          [5, 70, 150],
-          [0, 110, 200],
-          [0, 150, 230],
-          [0, 185, 255],
-          [35, 210, 255],
-          [80, 235, 255],
-          [130, 255, 255]
-        ],
-        glow: [160, 255, 255],
-        edge: [0, 80, 160]
-      },
-      monoRoyal: {
-        label: "Monoblu Royal",
-        range: [
-          [30, 35, 100],
-          [40, 55, 140],
-          [55, 75, 180],
-          [70, 95, 210],
-          [90, 120, 235],
-          [120, 150, 255],
-          [160, 190, 255]
-        ],
-        glow: [190, 215, 255],
-        edge: [28, 34, 90]
-      },
-      monoSoft: {
-        label: "Monoblu Soft",
-        range: [
-          [210, 230, 255],
-          [180, 210, 250],
-          [150, 195, 245],
-          [120, 175, 235],
-          [95, 155, 225],
-          [70, 135, 210],
-          [55, 115, 190]
-        ],
-        glow: [210, 240, 255],
-        edge: [150, 180, 210]
-      },
       gradSunrise: {
         label: "Gradient Sunrise",
         range: [
@@ -623,6 +537,38 @@ function makeLayer() {
         glow: [255, 180, 160],
         edge: [85, 18, 30]
       },
+      gradSky: {
+        label: "Gradient Голубой",
+        range: [
+          [10, 40, 90],
+          [25, 70, 140],
+          [40, 105, 190],
+          [60, 140, 220],
+          [85, 175, 240],
+          [120, 205, 250],
+          [160, 230, 255]
+        ],
+        gradient: true,
+        fixedT: 0.82,
+        glow: [185, 240, 255],
+        edge: [20, 50, 90]
+      },
+      gradBlue: {
+        label: "Gradient Синий",
+        range: [
+          [6, 20, 70],
+          [12, 35, 110],
+          [18, 55, 150],
+          [28, 80, 190],
+          [45, 110, 220],
+          [70, 140, 245],
+          [100, 175, 255]
+        ],
+        gradient: true,
+        fixedT: 0.8,
+        glow: [150, 200, 255],
+        edge: [10, 30, 70]
+      },
       solidAmber: {
         label: "Mono Amber",
         solid: [255, 177, 66],
@@ -652,6 +598,18 @@ function makeLayer() {
         solid: [190, 255, 120],
         glow: [225, 255, 170],
         edge: [90, 120, 40]
+      },
+      solidSky: {
+        label: "Mono Голубой",
+        solid: [120, 210, 255],
+        glow: [180, 240, 255],
+        edge: [40, 100, 150]
+      },
+      solidBlue: {
+        label: "Mono Синий",
+        solid: [70, 130, 255],
+        glow: [130, 180, 255],
+        edge: [20, 50, 120]
       },
       heightHeat: {
         label: "Height Heat",
@@ -727,11 +685,41 @@ function makeLayer() {
         gradient: true,
         glow: [210, 200, 255],
         edge: [20, 60, 90]
+      },
+      heightSky: {
+        label: "Height Голубой",
+        range: [
+          [12, 55, 110],
+          [20, 85, 160],
+          [35, 120, 200],
+          [55, 155, 225],
+          [85, 185, 240],
+          [120, 210, 250],
+          [160, 230, 255]
+        ],
+        gradient: true,
+        glow: [185, 235, 255],
+        edge: [20, 60, 110]
+      },
+      heightBlue: {
+        label: "Height Синий",
+        range: [
+          [8, 30, 90],
+          [15, 50, 130],
+          [25, 70, 170],
+          [40, 95, 205],
+          [60, 125, 230],
+          [85, 155, 245],
+          [120, 185, 255]
+        ],
+        gradient: true,
+        glow: [150, 205, 255],
+        edge: [10, 40, 90]
       }
     };
 
-  const paletteKey = paletteEl?.value || "monoblue";
-  const palette = palettes[paletteKey] || palettes.monoblue;
+  const paletteKey = paletteEl?.value || "gradSunrise";
+  const palette = palettes[paletteKey] || palettes.gradSunrise;
   const colorRange = palette.range;
 
 const COLOR_CAP = 12; // 12+ будет просто самым насыщенным
