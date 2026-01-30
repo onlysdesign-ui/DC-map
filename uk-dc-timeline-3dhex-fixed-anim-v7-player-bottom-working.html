@@ -175,6 +175,7 @@
           <option value="aurora">Aurora (dark map)</option>
           <option value="ember">Ember (dark map)</option>
           <option value="ultraviolet">Ultraviolet (dark map)</option>
+          <option value="prismatic">Prismatic Gradient (dark map)</option>
         </select>
       </div>
 
@@ -344,6 +345,7 @@ const sliderEl = document.getElementById("slider");
   let glowActiveUntil = 0;
   let lastGlowUpdate = 0;
   const GLOW_DURATION_MS = 1200;
+  const GLOW_DELAY_MS = 140;
   const GLOW_UPDATE_INTERVAL_MS = 70;
 
   // Helpers
@@ -494,6 +496,21 @@ function makeLayer() {
           [75, 60, 225]
         ],
         glow: [200, 150, 255]
+      },
+      prismatic: {
+        label: "Prismatic Gradient",
+        gradient: true,
+        range: [
+          [18, 110, 255],
+          [0, 190, 255],
+          [120, 240, 255],
+          [200, 170, 255],
+          [255, 140, 210],
+          [255, 185, 120],
+          [255, 220, 160]
+        ],
+        glow: [255, 210, 140],
+        edge: [255, 235, 190]
       }
     };
 
@@ -502,9 +519,23 @@ function makeLayer() {
   const colorRange = palette.range;
 
 const COLOR_CAP = 12; // 12+ будет просто самым насыщенным
+    const clamp01 = (n) => Math.max(0, Math.min(1, n));
+    const lerp = (a, b, t) => Math.round(a + (b - a) * t);
     function colorFor(v) {
-      const t = Math.max(0, Math.min(1, v / COLOR_CAP));
-        const idx = Math.floor(t * (colorRange.length - 1));
+      const t = clamp01(v / COLOR_CAP);
+      if (palette.gradient) {
+        const scaled = t * (colorRange.length - 1);
+        const idx = Math.floor(scaled);
+        const mix = scaled - idx;
+        const c1 = colorRange[idx];
+        const c2 = colorRange[Math.min(idx + 1, colorRange.length - 1)];
+        return [
+          lerp(c1[0], c2[0], mix),
+          lerp(c1[1], c2[1], mix),
+          lerp(c1[2], c2[2], mix)
+        ];
+      }
+      const idx = Math.floor(t * (colorRange.length - 1));
       return colorRange[idx];
     }
 
@@ -541,7 +572,13 @@ getFillColor: d => {
   const v = transform(d.count);
   const [r, g, b] = colorFor(v);
   const now = performance.now();
-  const glow = d.glowUntil && d.glowUntil > now ? Math.max(0, (d.glowUntil - now) / GLOW_DURATION_MS) : 0;
+  const glow =
+    d.glowStart &&
+    d.glowUntil &&
+    now >= d.glowStart &&
+    now <= d.glowUntil
+      ? Math.max(0, (d.glowUntil - now) / GLOW_DURATION_MS)
+      : 0;
   const glowMix = Math.min(1, glow * 1.15);
   const [gr, gg, gb] = palette.glow;
   const mix = (base, boost) => Math.round(base + (boost - base) * glowMix);
@@ -553,9 +590,19 @@ getLineColor: d => {
   // "точки" (контур) делаем полностью чёрными
   if (d.count === 0) return [0, 0, 0, 0];
   const now = performance.now();
-  const glow = d.glowUntil && d.glowUntil > now ? Math.max(0, (d.glowUntil - now) / GLOW_DURATION_MS) : 0;
-  const glowAlpha = Math.round(180 + glow * 70);
-  return [15, 20, 28, glowAlpha];
+  const glow =
+    d.glowStart &&
+    d.glowUntil &&
+    now >= d.glowStart &&
+    now <= d.glowUntil
+      ? Math.max(0, (d.glowUntil - now) / GLOW_DURATION_MS)
+      : 0;
+  const glowMix = Math.min(1, glow * 1.15);
+  const [gr, gg, gb] = palette.glow;
+  const [er, eg, eb] = palette.edge || [20, 28, 40];
+  const mix = (base, boost) => Math.round(base + (boost - base) * glowMix);
+  const glowAlpha = Math.round(160 + glow * 90);
+  return [mix(er, gr), mix(eg, gg), mix(eb, gb), glowAlpha];
 },
 
 lineWidthMinPixels: 1.5,
@@ -693,7 +740,8 @@ seedRegistryFromPoints(filteredPoints, res);
     let latestGlow = 0;
     for (const obj of stableCells) {
       if (obj.count > (obj.prevCount || 0)) {
-        obj.glowUntil = now + GLOW_DURATION_MS;
+        obj.glowStart = now + GLOW_DELAY_MS;
+        obj.glowUntil = obj.glowStart + GLOW_DURATION_MS;
       }
       if (obj.glowUntil && obj.glowUntil > latestGlow) {
         latestGlow = obj.glowUntil;
