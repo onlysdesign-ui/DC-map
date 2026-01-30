@@ -205,6 +205,8 @@
       align-items: flex-end;
       gap: 0;
       overflow: hidden;
+      cursor: pointer;
+      touch-action: none;
     }
     .histBar{
       flex: 1 1 0;
@@ -226,6 +228,8 @@
       border-radius: 999px;
       background: rgba(148, 163, 184, 0.15);
       overflow: hidden;
+      cursor: pointer;
+      touch-action: none;
     }
     .histogramProgressFill{
       position: absolute;
@@ -354,7 +358,7 @@
         <button id="play" class="btn btnPlayIcon btnPlayIcon--small" type="button" aria-label="Play/Pause" title="Play/Pause">▶</button>
       </div>
       <div id="histogramBars" class="histogramBars"></div>
-      <div class="histogramProgress" aria-hidden="true">
+      <div id="histogramProgress" class="histogramProgress" aria-hidden="true">
         <div id="histogramProgressFill" class="histogramProgressFill"></div>
       </div>
     </div>
@@ -396,6 +400,7 @@ const sliderEl = document.getElementById("slider");
   const stepsLabelEl = document.getElementById("stepsLabel");
   const shownPillEl = document.getElementById("shownPill");
   const histogramBarsEl = document.getElementById("histogramBars");
+  const histogramProgressEl = document.getElementById("histogramProgress");
   const histogramProgressFillEl = document.getElementById("histogramProgressFill");
   const playBtn = document.getElementById("play");
   const elevEl = document.getElementById("elev");
@@ -1223,6 +1228,47 @@ seedRegistryFromPoints(filteredPoints, res);
   // UI wiring
   sliderEl.addEventListener("input", () => { stopPlayback(); applyTimeline(Number(sliderEl.value)); });
   playBtn.addEventListener("click", () => { if (!months.length) return; playing ? stopPlayback() : startPlayback(); });
+
+  let draggingTimeline = false;
+  function seekTimelineAt(clientX, rect) {
+    if (!months.length) return;
+    if (!rect || rect.width === 0) return;
+    const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+    const pct = x / rect.width;
+    const idx = Math.round(pct * Math.max(1, months.length - 1));
+    sliderEl.value = String(idx);
+    applyTimeline(idx);
+  }
+  function attachTimelineDrag(el) {
+    if (!el) return;
+    el.addEventListener("pointerdown", (event) => {
+      if (!months.length || sliderEl.disabled) return;
+      stopPlayback();
+      draggingTimeline = true;
+      el.setPointerCapture(event.pointerId);
+      seekTimelineAt(event.clientX, el.getBoundingClientRect());
+    });
+    el.addEventListener("pointermove", (event) => {
+      if (!draggingTimeline) return;
+      seekTimelineAt(event.clientX, el.getBoundingClientRect());
+    });
+    el.addEventListener("pointerup", (event) => {
+      if (!draggingTimeline) return;
+      draggingTimeline = false;
+      if (el.hasPointerCapture(event.pointerId)) {
+        el.releasePointerCapture(event.pointerId);
+      }
+    });
+    el.addEventListener("pointercancel", (event) => {
+      if (!draggingTimeline) return;
+      draggingTimeline = false;
+      if (el.hasPointerCapture(event.pointerId)) {
+        el.releasePointerCapture(event.pointerId);
+      }
+    });
+  }
+  attachTimelineDrag(histogramBarsEl);
+  attachTimelineDrag(histogramProgressEl);
 
   elevEl.addEventListener("input", () => { setVals(); updateOverlay(); });
   logToggleEl.addEventListener("change", () => { updateOverlay(); });
