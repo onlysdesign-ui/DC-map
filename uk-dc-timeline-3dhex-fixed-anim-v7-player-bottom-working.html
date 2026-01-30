@@ -780,6 +780,87 @@ function makeLayer() {
         glow: [200, 210, 255],
         edge: [170, 175, 240],
         mode: "value"
+        range: [
+          [10, 40, 95],
+          [20, 70, 140],
+          [30, 100, 185],
+          [40, 130, 220],
+          [60, 165, 245],
+          [90, 195, 255],
+          [130, 225, 255]
+        ],
+        glow: [160, 235, 255],
+        edge: [18, 34, 58]
+      },
+      monoIce: {
+        label: "Monoblu Ice",
+        range: [
+          [200, 240, 255],
+          [170, 230, 255],
+          [130, 215, 255],
+          [95, 195, 255],
+          [70, 170, 245],
+          [50, 145, 225],
+          [35, 120, 205]
+        ],
+        glow: [220, 255, 255],
+        edge: [180, 210, 230]
+      },
+      monoDeep: {
+        label: "Monoblu Deep",
+        range: [
+          [4, 16, 48],
+          [8, 28, 72],
+          [12, 40, 96],
+          [16, 60, 128],
+          [26, 80, 160],
+          [38, 105, 190],
+          [58, 130, 215]
+        ],
+        glow: [120, 190, 255],
+        edge: [6, 12, 26]
+      },
+      monoNeon: {
+        label: "Monoblu Neon",
+        range: [
+          [5, 70, 150],
+          [0, 110, 200],
+          [0, 150, 230],
+          [0, 185, 255],
+          [35, 210, 255],
+          [80, 235, 255],
+          [130, 255, 255]
+        ],
+        glow: [160, 255, 255],
+        edge: [0, 80, 160]
+      },
+      monoRoyal: {
+        label: "Monoblu Royal",
+        range: [
+          [30, 35, 100],
+          [40, 55, 140],
+          [55, 75, 180],
+          [70, 95, 210],
+          [90, 120, 235],
+          [120, 150, 255],
+          [160, 190, 255]
+        ],
+        glow: [190, 215, 255],
+        edge: [28, 34, 90]
+      },
+      monoSoft: {
+        label: "Monoblu Soft",
+        range: [
+          [210, 230, 255],
+          [180, 210, 250],
+          [150, 195, 245],
+          [120, 175, 235],
+          [95, 155, 225],
+          [70, 135, 210],
+          [55, 115, 190]
+        ],
+        glow: [210, 240, 255],
+        edge: [150, 180, 210]
       }
     };
 
@@ -1150,6 +1231,8 @@ seedRegistryFromPoints(filteredPoints, res);
       map.fitBounds([[minLon, minLat], [maxLon, maxLat]], {padding: 60, duration: 600});
     } else {
       dataLatRange = { min: -90, max: 90 };
+      const [minLon,minLat,maxLon,maxLat] = b;
+      map.fitBounds([[minLon, minLat], [maxLon, maxLat]], {padding: 60, duration: 600});
     }
 
     setVals();
