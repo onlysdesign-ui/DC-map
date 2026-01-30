@@ -441,6 +441,7 @@ function makeLayer() {
     const FILL_ALPHA = 255; // полностью непрозрачные бары
     const LINE_ALPHA = 90;  // контур чуть мягче
     const LINE_WIDTH = 1.3; // px
+    const WARM_GLOW = [255, 214, 130];
     const palettes = {
       electric: {
         label: "Electric Blue",
@@ -621,7 +622,7 @@ const COLOR_CAP = 12; // 12+ будет просто самым насыщенн
     },
       transitions: {
   getElevation: {
-    duration: 700,
+    duration: ELEV_TRANSITION_MS,
     easing: d3.easeCubicOut
   }
 },
@@ -797,7 +798,8 @@ seedRegistryFromPoints(filteredPoints, res);
     let latestGlow = 0;
     for (const obj of stableCells) {
       if (obj.count > (obj.prevCount || 0)) {
-        obj.glowUntil = now + GLOW_DURATION_MS;
+        obj.glowStart = now + ELEV_TRANSITION_MS;
+        obj.glowUntil = obj.glowStart + GLOW_DURATION_MS;
       }
       if (obj.glowUntil && obj.glowUntil > latestGlow) {
         latestGlow = obj.glowUntil;
