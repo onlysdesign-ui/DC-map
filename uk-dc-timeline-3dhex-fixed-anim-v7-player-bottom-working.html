@@ -339,6 +339,15 @@
           log(1 + count)
         </label>
       </div>
+      <div style="margin-top:10px;">
+        <div class="labelRow">
+          <span class="labelText">Metric</span>
+        </div>
+        <select id="metricSelect" class="select" style="width:100%;">
+          <option value="count" selected>Count (current)</option>
+          <option value="pci">Physical Capacity Index (PCI)</option>
+        </select>
+      </div>
     </div>
   </div>
 </div>
@@ -406,6 +415,7 @@ const sliderEl = document.getElementById("slider");
   const elevEl = document.getElementById("elev");
   const elevValEl = document.getElementById("elevVal");
   const logToggleEl = document.getElementById("logToggle");
+  const metricSelectEl = document.getElementById("metricSelect");
   const h3resEl = document.getElementById("h3res");
   const resValEl = document.getElementById("resVal");
   const paletteEl = document.getElementById("palette");
@@ -432,7 +442,8 @@ const sliderEl = document.getElementById("slider");
   // timeline months (UTC month start)
   let months = [];
   let monthIndexByMs = new Map();
-  let monthlyChanges = [];
+  let monthlyCountChanges = [];
+  let monthlyPciChanges = [];
 
   // accumulative counts per month: Array<Map<h3Cell, count>>
   let h3ByMonth = [];
@@ -470,7 +481,7 @@ const sliderEl = document.getElementById("slider");
     if (typeof lon !== "number" || typeof lat !== "number") continue;
 
     const cell = h3.latLngToCell(lat, lon, res);
-    if (!cellRegistry.has(cell)) cellRegistry.set(cell, { cell, count: 0 });
+    if (!cellRegistry.has(cell)) cellRegistry.set(cell, { cell, count: 0, pci: 0 });
   }
   stableCells = Array.from(cellRegistry.values());
 }
@@ -495,7 +506,7 @@ const sliderEl = document.getElementById("slider");
 
     // register all cells as stable objects with count=0
     for (const cell of cells) {
-      if (!cellRegistry.has(cell)) cellRegistry.set(cell, { cell, count: 0 });
+      if (!cellRegistry.has(cell)) cellRegistry.set(cell, { cell, count: 0, pci: 0 });
     }
     stableCells = Array.from(cellRegistry.values());
     return cells;
@@ -515,6 +526,17 @@ const sliderEl = document.getElementById("slider");
 
   // Helpers
   function getProp(p, keys) { for (const k of keys) if (p && p[k] != null && p[k] !== "") return p[k]; return ""; }
+  function parseNumber(value) {
+    if (value == null || value === "") return 0;
+    const n = Number(String(value).replace(/,/g, ""));
+    return Number.isFinite(n) ? n : 0;
+  }
+  function computePCI(props) {
+    const area = parseNumber(getProp(props, ["area_in_m2", "area", "building:floor_area"]));
+    const buildings = parseNumber(getProp(props, ["number_of_buildings", "building_count", "building:units"]));
+    if (area <= 0 || buildings <= 0) return 0;
+    return Math.log(area) * buildings;
+  }
   function parseTimestampToMs(ts) { const d = new Date(ts); const ms = d.getTime(); return Number.isFinite(ms) ? ms : null; }
   function toMonthMs(ms) { const d = new Date(ms); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1); }
   function buildMonthRange(minMs, maxMs) {
@@ -530,7 +552,7 @@ const sliderEl = document.getElementById("slider");
     }
     return range;
   }
-  function buildMonthlyChanges(points, monthList) {
+  function buildMonthlyChanges(points, monthList, valueAccessor) {
     const counts = monthList.map(() => 0);
     if (!monthList.length) return counts;
     const indexByMs = new Map(monthList.map((ms, i) => [ms, i]));
@@ -538,9 +560,26 @@ const sliderEl = document.getElementById("slider");
       if (p.tMonthMs == null) continue;
       const idx = indexByMs.get(p.tMonthMs);
       if (idx == null) continue;
-      counts[idx] += 1;
+      counts[idx] += valueAccessor(p);
     }
     return counts;
+  }
+  function getMetric() {
+    return metricSelectEl?.value === "pci" ? "pci" : "count";
+  }
+  function formatMetricValue(value, metric) {
+    if (metric === "pci") {
+      return value.toLocaleString(undefined, {maximumFractionDigits: 2});
+    }
+    return Math.round(value).toLocaleString();
+  }
+  function syncMetricUi() {
+    const metric = getMetric();
+    const isCount = metric === "count";
+    if (logToggleEl) {
+      logToggleEl.disabled = !isCount;
+      logToggleEl.closest("label")?.setAttribute("aria-disabled", String(!isCount));
+    }
   }
   function renderHistogram() {
     if (!histogramBarsEl) return;
@@ -549,13 +588,15 @@ const sliderEl = document.getElementById("slider");
       updateHistogramProgress(0);
       return;
     }
-    const max = Math.max(1, ...monthlyChanges);
+    const metric = getMetric();
+    const changes = metric === "pci" ? monthlyPciChanges : monthlyCountChanges;
+    const max = Math.max(1, ...changes);
     const frag = document.createDocumentFragment();
-    monthlyChanges.forEach((count, idx) => {
+    changes.forEach((count, idx) => {
       const bar = document.createElement("span");
       bar.className = "histBar" + (count === 0 ? " zero" : "");
       bar.style.height = `${Math.max(4, Math.round((count / max) * 54))}px`;
-      bar.title = `${formatDayText(months[idx])}: +${count}`;
+      bar.title = `${formatDayText(months[idx])}: +${formatMetricValue(count, metric)}`;
       bar.dataset.index = String(idx);
       frag.appendChild(bar);
     });
@@ -644,7 +685,7 @@ async function ensureBaseGridFromPoints(res) {
 
   // регистрируем все клетки в реестре как стабильные объекты count=0
   for (const cell of cells) {
-    if (!cellRegistry.has(cell)) cellRegistry.set(cell, { cell, count: 0 });
+    if (!cellRegistry.has(cell)) cellRegistry.set(cell, { cell, count: 0, pci: 0 });
   }
   stableCells = Array.from(cellRegistry.values());
   return cells;
@@ -657,8 +698,10 @@ async function ensureBaseGridFromPoints(res) {
 
 function makeLayer() {
   const elevationScale = Number(elevEl.value); // высота за 1 DC
-  const useLog = !!logToggleEl.checked;
+  const metric = getMetric();
+  const useLog = metric === "count" && !!logToggleEl.checked;
   const transform = (n) => useLog ? Math.log1p(n) : n;
+  const getMetricValue = (d) => metric === "pci" ? (d.pci || 0) : (d.count || 0);
     
     const BASE_ELEV = 0.18; // минимальная высота (до умножения на elevationScale)
     const FILL_ALPHA = 255; // полностью непрозрачные бары
@@ -958,9 +1001,9 @@ const COLOR_CAP = 12; // 12+ будет просто самым насыщенн
     id: "h3-polygons",
     data: cellsNow, // [{cell, count}]
     updateTriggers: {
-      getElevation: [frameTick, elevEl.value, logToggleEl.checked, h3resEl.value],
-      getFillColor: [frameTick, logToggleEl.checked, paletteKey],
-      getLineColor: [frameTick, logToggleEl.checked, paletteKey]
+      getElevation: [frameTick, elevEl.value, logToggleEl.checked, h3resEl.value, metric],
+      getFillColor: [frameTick, logToggleEl.checked, paletteKey, metric],
+      getLineColor: [frameTick, logToggleEl.checked, paletteKey, metric]
     },
     // h3 boundary -> polygon (lon/lat)
     getPolygon: d => {
@@ -979,12 +1022,16 @@ extruded: true,
 stroked: true,
 filled: true,
 wireframe: false,
-getElevation: d => d.count === 0 ? 0 : (BASE_ELEV + transform(d.count)) * elevationScale,
+getElevation: d => {
+  const value = getMetricValue(d);
+  return value === 0 ? 0 : (BASE_ELEV + transform(value)) * elevationScale;
+},
 getFillColor: d => {
   // 0 не рисуем, чтобы не было "плитки" в море/пустоте
-  if (d.count === 0) return [0, 0, 0, 0];
+  const value = getMetricValue(d);
+  if (value === 0) return [0, 0, 0, 0];
 
-  const v = palette.fixedT != null ? COLOR_CAP * palette.fixedT : transform(d.count);
+  const v = palette.fixedT != null ? COLOR_CAP * palette.fixedT : transform(value);
   const [r, g, b] = colorFor(v);
   const now = performance.now();
   const glow =
@@ -1003,7 +1050,8 @@ getFillColor: d => {
 
 getLineColor: d => {
   // "точки" (контур) делаем полностью чёрными
-  if (d.count === 0) return [0, 0, 0, 0];
+  const value = getMetricValue(d);
+  if (value === 0) return [0, 0, 0, 0];
   const now = performance.now();
   const glow =
     d.glowStart &&
@@ -1066,7 +1114,8 @@ lineWidthMinPixels: 1.5,
       timeLabelEl.textContent = "—";
       stepsLabelEl.textContent = "0 steps";
       shownPillEl.textContent = "0 shown";
-      monthlyChanges = [];
+      monthlyCountChanges = [];
+      monthlyPciChanges = [];
       renderHistogram();
       // вместо пустоты показываем базовую сетку UK
        try {
@@ -1091,7 +1140,8 @@ seedRegistryFromPoints(filteredPoints, res);
 
     // prepare accumulative maps
     h3ByMonth = Array.from({length: months.length}, () => new Map());
-    monthlyChanges = buildMonthlyChanges(filteredPoints, months);
+    monthlyCountChanges = buildMonthlyChanges(filteredPoints, months, () => 1);
+    monthlyPciChanges = buildMonthlyChanges(filteredPoints, months, (p) => p.pci || 0);
     renderHistogram();
 
     const res = Number(h3resEl.value);
@@ -1121,7 +1171,10 @@ seedRegistryFromPoints(filteredPoints, res);
       // add this point to its month and all future months (accumulative)
       for (let j = idx; j < months.length; j++) {
         const m = h3ByMonth[j];
-        m.set(cell, (m.get(cell) || 0) + 1);
+        const entry = m.get(cell) || {count: 0, pci: 0};
+        entry.count += 1;
+        entry.pci += p.pci || 0;
+        m.set(cell, entry);
       }
     }
 
@@ -1154,18 +1207,24 @@ seedRegistryFromPoints(filteredPoints, res);
     // First set all known cells to 0, then apply counts for this frame.
     for (const obj of stableCells) {
       obj.prevCount = obj.count || 0;
+      obj.prevPci = obj.pci || 0;
       obj.count = 0;
+      obj.pci = 0;
     }
-    for (const [cell, count] of m.entries()) {
+    for (const [cell, entry] of m.entries()) {
       const obj = cellRegistry.get(cell);
       if (!obj) continue; // never create new cells during playback
-      obj.count = count;
+      obj.count = entry.count || 0;
+      obj.pci = entry.pci || 0;
     }
 
     const now = performance.now();
     let latestGlow = 0;
     for (const obj of stableCells) {
-      if (obj.count > (obj.prevCount || 0)) {
+      const metric = getMetric();
+      const currentValue = metric === "pci" ? obj.pci : obj.count;
+      const prevValue = metric === "pci" ? obj.prevPci : obj.prevCount;
+      if (currentValue > (prevValue || 0)) {
         obj.glowStart = now + GLOW_DELAY_MS;
         obj.glowUntil = obj.glowStart + GLOW_DURATION_MS;
       }
@@ -1183,8 +1242,11 @@ seedRegistryFromPoints(filteredPoints, res);
     frameTick++;
 
 
-    const total = Array.from(m.values()).reduce((s, v) => s + v, 0);
-    shownPillEl.textContent = `${total} shown`;
+    const metric = getMetric();
+    const total = Array.from(m.values()).reduce((s, v) => s + (metric === "pci" ? v.pci : v.count), 0);
+    shownPillEl.textContent = metric === "pci"
+      ? `PCI Σ ${formatMetricValue(total, metric)}`
+      : `${formatMetricValue(total, metric)} shown`;
 
     updateOverlay();
   }
@@ -1272,6 +1334,13 @@ seedRegistryFromPoints(filteredPoints, res);
 
   elevEl.addEventListener("input", () => { setVals(); updateOverlay(); });
   logToggleEl.addEventListener("change", () => { updateOverlay(); });
+  if (metricSelectEl) {
+    metricSelectEl.addEventListener("change", () => {
+      syncMetricUi();
+      renderHistogram();
+      applyTimeline(Number(sliderEl.value || 0));
+    });
+  }
   paletteEl.addEventListener("change", () => { setVals(); updateOverlay(); });
 
   if (togglePanelEl && panelEl) {
@@ -1294,7 +1363,7 @@ seedRegistryFromPoints(filteredPoints, res);
   
   document.getElementById("clear").addEventListener("click", () => {
     stopPlayback();
-    allPoints=[]; filteredPoints=[]; months=[]; monthIndexByMs=new Map(); h3ByMonth=[]; cellsNow=[]; monthlyChanges=[];
+    allPoints=[]; filteredPoints=[]; months=[]; monthIndexByMs=new Map(); h3ByMonth=[]; cellsNow=[]; monthlyCountChanges=[]; monthlyPciChanges=[];
     fileEl.value="";
     sliderEl.disabled=true; sliderEl.min="0"; sliderEl.max="0"; sliderEl.value="0";
     timeLabelEl.textContent="—"; stepsLabelEl.textContent="0 steps"; shownPillEl.textContent="0 shown";
@@ -1326,7 +1395,8 @@ seedRegistryFromPoints(filteredPoints, res);
       return {
         coordinates: p.coordinates,
         properties: props,
-        tMonthMs: (ms != null) ? toMonthMs(ms) : null
+        tMonthMs: (ms != null) ? toMonthMs(ms) : null,
+        pci: computePCI(props)
       };
     }).filter(p => Array.isArray(p.coordinates) && typeof p.coordinates[0] === "number" && typeof p.coordinates[1] === "number");
 
@@ -1382,6 +1452,7 @@ seedRegistryFromPoints(filteredPoints, res);
   });
 
     map.on("load", async () => {
+      syncMetricUi();
       setStat("Choose uk-datacenters.geojson. Tip: log off = strictly linear heights.");
 
       // Всегда строим базовую сетку и показываем её с нулевыми значениями
