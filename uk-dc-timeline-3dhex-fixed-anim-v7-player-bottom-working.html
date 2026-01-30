@@ -185,6 +185,42 @@
       font-size: 1em;
       line-height: 1.2;
     }
+    .timelineHistogram{
+      margin-top: 6px;
+      margin-bottom: 10px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--ui-border);
+      background: rgba(15, 23, 42, 0.6);
+      display: grid;
+      gap: 6px;
+    }
+    .histogramTitle{
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--ui-muted);
+    }
+    .histogramBars{
+      height: 54px;
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+    }
+    .histBar{
+      flex: 1 1 0;
+      background: rgba(96, 165, 250, 0.35);
+      border-radius: 4px 4px 2px 2px;
+      min-width: 2px;
+      transition: background 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+    }
+    .histBar.zero{
+      opacity: 0.25;
+    }
+    .histBar.active{
+      background: var(--ui-accent);
+      box-shadow: 0 0 10px rgba(96, 165, 250, 0.7);
+    }
 </style>
 </head>
 
@@ -288,6 +324,10 @@
       <span id="timeLabel" class="current-date">—</span>
       <span class="current-subtitle">Data Center Expansion Map</span>
     </div>
+    <div class="timelineHistogram" aria-label="Histogram of monthly changes">
+      <span class="histogramTitle">Изменения по месяцам</span>
+      <div id="histogramBars" class="histogramBars"></div>
+    </div>
     <div class="playerCard">
       <div class="playerControls">
         <button id="play" class="btn btnPlayIcon" type="button" aria-label="Play/Pause" title="Play/Pause">▶</button>
@@ -331,6 +371,7 @@ const sliderEl = document.getElementById("slider");
   const timeLabelEl = document.getElementById("timeLabel");
   const stepsLabelEl = document.getElementById("stepsLabel");
   const shownPillEl = document.getElementById("shownPill");
+  const histogramBarsEl = document.getElementById("histogramBars");
   const playBtn = document.getElementById("play");
   const elevEl = document.getElementById("elev");
   const elevValEl = document.getElementById("elevVal");
@@ -361,6 +402,7 @@ const sliderEl = document.getElementById("slider");
   // timeline months (UTC month start)
   let months = [];
   let monthIndexByMs = new Map();
+  let monthlyChanges = [];
 
   // accumulative counts per month: Array<Map<h3Cell, count>>
   let h3ByMonth = [];
@@ -457,6 +499,41 @@ const sliderEl = document.getElementById("slider");
       cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 1));
     }
     return range;
+  }
+  function buildMonthlyChanges(points, monthList) {
+    const counts = monthList.map(() => 0);
+    if (!monthList.length) return counts;
+    const indexByMs = new Map(monthList.map((ms, i) => [ms, i]));
+    for (const p of points) {
+      if (p.tMonthMs == null) continue;
+      const idx = indexByMs.get(p.tMonthMs);
+      if (idx == null) continue;
+      counts[idx] += 1;
+    }
+    return counts;
+  }
+  function renderHistogram() {
+    if (!histogramBarsEl) return;
+    histogramBarsEl.innerHTML = "";
+    if (!months.length) return;
+    const max = Math.max(1, ...monthlyChanges);
+    const frag = document.createDocumentFragment();
+    monthlyChanges.forEach((count, idx) => {
+      const bar = document.createElement("span");
+      bar.className = "histBar" + (count === 0 ? " zero" : "");
+      bar.style.height = `${Math.max(4, Math.round((count / max) * 54))}px`;
+      bar.title = `${formatDayText(months[idx])}: +${count}`;
+      bar.dataset.index = String(idx);
+      frag.appendChild(bar);
+    });
+    histogramBarsEl.appendChild(frag);
+  }
+  function highlightHistogram(index) {
+    if (!histogramBarsEl) return;
+    const bars = histogramBarsEl.querySelectorAll(".histBar");
+    bars.forEach((bar) => {
+      bar.classList.toggle("active", Number(bar.dataset.index) === index);
+    });
   }
   function fmtDay(ms) {
     const d = new Date(ms);
@@ -946,6 +1023,8 @@ lineWidthMinPixels: 1.5,
       timeLabelEl.textContent = "—";
       stepsLabelEl.textContent = "0 steps";
       shownPillEl.textContent = "0 shown";
+      monthlyChanges = [];
+      renderHistogram();
       // вместо пустоты показываем базовую сетку UK
        try {
           const res = Number(h3resEl.value);
@@ -969,6 +1048,8 @@ seedRegistryFromPoints(filteredPoints, res);
 
     // prepare accumulative maps
     h3ByMonth = Array.from({length: months.length}, () => new Map());
+    monthlyChanges = buildMonthlyChanges(filteredPoints, months);
+    renderHistogram();
 
     const res = Number(h3resEl.value);
 
@@ -1021,6 +1102,7 @@ seedRegistryFromPoints(filteredPoints, res);
   function applyTimeline(idx) {
     const t = months[idx];
     renderTimeLabel(t);
+    highlightHistogram(idx);
 
     const m = h3ByMonth[idx] || new Map();
 
@@ -1127,10 +1209,11 @@ seedRegistryFromPoints(filteredPoints, res);
   
   document.getElementById("clear").addEventListener("click", () => {
     stopPlayback();
-    allPoints=[]; filteredPoints=[]; months=[]; monthIndexByMs=new Map(); h3ByMonth=[]; cellsNow=[];
+    allPoints=[]; filteredPoints=[]; months=[]; monthIndexByMs=new Map(); h3ByMonth=[]; cellsNow=[]; monthlyChanges=[];
     fileEl.value="";
     sliderEl.disabled=true; sliderEl.min="0"; sliderEl.max="0"; sliderEl.value="0";
     timeLabelEl.textContent="—"; stepsLabelEl.textContent="0 steps"; shownPillEl.textContent="0 shown";
+    renderHistogram();
     setStat("Cleared.");
     updateOverlay();
   });
