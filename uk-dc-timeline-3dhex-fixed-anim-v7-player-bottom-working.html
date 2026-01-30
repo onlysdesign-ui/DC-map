@@ -434,7 +434,7 @@ const sliderEl = document.getElementById("slider");
   function fmtDay(ms) {
     const d = new Date(ms);
     const y = d.getUTCFullYear();
-    const monthName = new Intl.DateTimeFormat("ru-RU", { month: "long" }).format(d);
+    const monthName = new Intl.DateTimeFormat("en-En", { month: "long" }).format(d);
     return `${y} ${monthName}`;
   }
   function extractPointsFromGeoJSON(geo) {
