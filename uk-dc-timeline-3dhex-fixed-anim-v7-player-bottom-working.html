@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <title>UK DC timeline (MapLibre + deck.gl + H3)</title>
@@ -131,16 +131,6 @@
       pointer-events:none; /* allow map interactions around it */
       width:min(720px, calc(100vw - 40px));
     }
-    .playerCard{
-      pointer-events:auto;
-      background: var(--ui-bg);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid var(--ui-border);
-      border-radius: 16px;
-      box-shadow: 0 14px 40px rgba(2, 6, 23, 0.7);
-      padding: 10px 12px;
-    }
     .playerMeta{
       display:flex;
       flex-direction:column;
@@ -155,6 +145,7 @@
     .pillBig{ font-size:12px; padding:4px 12px; }
     .btnIcon{ width:38px; height:38px; border-radius:12px; padding:0; display:grid; place-items:center; }
     .btnPlayIcon{ width:46px; height:46px; border-radius:14px; padding:0; display:grid; place-items:center; font-size:16px; }
+    .btnPlayIcon--small{ width:38px; height:38px; border-radius:12px; font-size:14px; }
     .current-date {
       font-size: 18px;
       font-weight: 500;
@@ -195,6 +186,12 @@
       display: grid;
       gap: 6px;
     }
+    .histogramHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+    }
     .histogramTitle{
       font-size: 11px;
       letter-spacing: 0.04em;
@@ -205,13 +202,14 @@
       height: 54px;
       display: flex;
       align-items: flex-end;
-      gap: 2px;
+      gap: 0;
+      overflow: hidden;
     }
     .histBar{
       flex: 1 1 0;
       background: rgba(96, 165, 250, 0.35);
       border-radius: 4px 4px 2px 2px;
-      min-width: 2px;
+      min-width: 0;
       transition: background 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
     }
     .histBar.zero{
@@ -220,6 +218,31 @@
     .histBar.active{
       background: var(--ui-accent);
       box-shadow: 0 0 10px rgba(96, 165, 250, 0.7);
+    }
+    .histogramProgress{
+      position: relative;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.15);
+      overflow: hidden;
+    }
+    .histogramProgressFill{
+      position: absolute;
+      inset: 0;
+      width: 0%;
+      background: linear-gradient(90deg, rgba(96, 165, 250, 0.9), rgba(96, 165, 250, 0.5));
+      transition: width 160ms ease;
+    }
+    .visually-hidden{
+      position:absolute;
+      width:1px;
+      height:1px;
+      padding:0;
+      margin:-1px;
+      overflow:hidden;
+      clip:rect(0,0,0,0);
+      white-space:nowrap;
+      border:0;
     }
 </style>
 </head>
@@ -325,20 +348,20 @@
       <span class="current-subtitle">Data Center Expansion Map</span>
     </div>
     <div class="timelineHistogram" aria-label="Histogram of monthly changes">
-      <span class="histogramTitle">Изменения по месяцам</span>
+      <div class="histogramHeader">
+        <span class="histogramTitle">Monthly changes</span>
+        <button id="play" class="btn btnPlayIcon btnPlayIcon--small" type="button" aria-label="Play/Pause" title="Play/Pause">▶</button>
+      </div>
       <div id="histogramBars" class="histogramBars"></div>
+      <div class="histogramProgress" aria-hidden="true">
+        <div id="histogramProgressFill" class="histogramProgressFill"></div>
+      </div>
     </div>
-    <div class="playerCard">
-      <div class="playerControls">
-        <button id="play" class="btn btnPlayIcon" type="button" aria-label="Play/Pause" title="Play/Pause">▶</button>
-        <input id="slider" class="playerSlider" type="range" min="0" max="0" value="0" step="1" disabled />
-      </div>
-
-      <div class="playerLabels">
-        <span id="startLabel" class="pill pillGhost">—</span>
-        <span id="stepsLabel" class="pill pillGhost">0 steps</span>
-        <span id="endLabel" class="pill pillGhost">—</span>
-      </div>
+    <div class="visually-hidden" aria-hidden="true">
+      <input id="slider" class="playerSlider" type="range" min="0" max="0" value="0" step="1" disabled />
+      <span id="startLabel" class="pill pillGhost">—</span>
+      <span id="stepsLabel" class="pill pillGhost">0 steps</span>
+      <span id="endLabel" class="pill pillGhost">—</span>
     </div>
   </div>
 </div>
@@ -347,7 +370,7 @@
   const {MapboxOverlay, PolygonLayer} = deck;
   const h3 = window.h3 || window.h3js;
     if (!h3) {
-      throw new Error("h3-js не загрузился (нет window.h3 / window.h3js)");
+      throw new Error("h3-js failed to load (no window.h3 / window.h3js)");
     }
 
   // Basemap style
@@ -372,6 +395,7 @@ const sliderEl = document.getElementById("slider");
   const stepsLabelEl = document.getElementById("stepsLabel");
   const shownPillEl = document.getElementById("shownPill");
   const histogramBarsEl = document.getElementById("histogramBars");
+  const histogramProgressFillEl = document.getElementById("histogramProgressFill");
   const playBtn = document.getElementById("play");
   const elevEl = document.getElementById("elev");
   const elevValEl = document.getElementById("elevVal");
@@ -515,7 +539,10 @@ const sliderEl = document.getElementById("slider");
   function renderHistogram() {
     if (!histogramBarsEl) return;
     histogramBarsEl.innerHTML = "";
-    if (!months.length) return;
+    if (!months.length) {
+      updateHistogramProgress(0);
+      return;
+    }
     const max = Math.max(1, ...monthlyChanges);
     const frag = document.createDocumentFragment();
     monthlyChanges.forEach((count, idx) => {
@@ -534,6 +561,16 @@ const sliderEl = document.getElementById("slider");
     bars.forEach((bar) => {
       bar.classList.toggle("active", Number(bar.dataset.index) === index);
     });
+  }
+  function updateHistogramProgress(index) {
+    if (!histogramProgressFillEl) return;
+    if (!months.length) {
+      histogramProgressFillEl.style.width = "0%";
+      return;
+    }
+    const maxIndex = Math.max(1, months.length - 1);
+    const pct = Math.max(0, Math.min(1, index / maxIndex)) * 100;
+    histogramProgressFillEl.style.width = `${pct}%`;
   }
   function fmtDay(ms) {
     const d = new Date(ms);
@@ -1039,7 +1076,7 @@ seedRegistryFromPoints(filteredPoints, res);
         }
 
       updateOverlay();
-      setStat("Нет @timestamp в данных (или он не распарсился). Нужен properties['@timestamp'] из Overpass meta.");
+      setStat("No @timestamp found in data (or it failed to parse). Expected properties['@timestamp'] from Overpass meta.");
       return;
     }
 
@@ -1103,6 +1140,7 @@ seedRegistryFromPoints(filteredPoints, res);
     const t = months[idx];
     renderTimeLabel(t);
     highlightHistogram(idx);
+    updateHistogramProgress(idx);
 
     const m = h3ByMonth[idx] || new Map();
 
@@ -1214,6 +1252,7 @@ seedRegistryFromPoints(filteredPoints, res);
     sliderEl.disabled=true; sliderEl.min="0"; sliderEl.max="0"; sliderEl.value="0";
     timeLabelEl.textContent="—"; stepsLabelEl.textContent="0 steps"; shownPillEl.textContent="0 shown";
     renderHistogram();
+    updateHistogramProgress(0);
     setStat("Cleared.");
     updateOverlay();
   });
@@ -1229,7 +1268,7 @@ seedRegistryFromPoints(filteredPoints, res);
     const raw = extractPointsFromGeoJSON(geo);
 
     if (!raw.length) {
-      setStat("Файл загрузился, но точек нет. Проверь, что GeoJSON содержит Point-геометрии.");
+      setStat("File loaded, but no points were found. Ensure the GeoJSON contains Point geometries.");
       return;
     }
 
@@ -1272,7 +1311,7 @@ seedRegistryFromPoints(filteredPoints, res);
         loadGeoJSONData(geo, f.name);
       } catch (err) {
         console.error(err);
-        alert("Не удалось распарсить JSON/GeoJSON.");
+        alert("Failed to parse JSON/GeoJSON.");
       }
     };
     reader.readAsText(f);
@@ -1290,13 +1329,13 @@ seedRegistryFromPoints(filteredPoints, res);
         loadGeoJSONData(geo, `server/${fileName}`);
       } catch (err) {
         console.error(err);
-        alert("Не удалось загрузить файл с сервера.");
+        alert("Failed to load file from server.");
       }
     });
   });
 
     map.on("load", async () => {
-      setStat("Выбери uk-datacenters.geojson. Совет: log выключен = строго линейные высоты.");
+      setStat("Choose uk-datacenters.geojson. Tip: log off = strictly linear heights.");
 
       // Всегда строим базовую сетку и показываем её с нулевыми значениями
       try {
