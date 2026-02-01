@@ -286,8 +286,8 @@
       </div>
 
       <div class="control-group">
-        <label for="spawnRate">Скорость появления <span id="spawnRateValue">18</span></label>
-        <input type="range" id="spawnRate" min="2" max="40" value="18" />
+        <label for="spawnRate">Скорость появления <span id="spawnRateValue">40</span></label>
+        <input type="range" id="spawnRate" min="2" max="80" value="40" />
       </div>
 
       <div class="control-group">
@@ -324,6 +324,7 @@
     const SCREEN_WIDTH = 393;
     const SCREEN_HEIGHT = 852;
     const LEVEL_LINE_Y = 78;
+    const ENABLE_TILT_CONTROLS = false;
 
     const colors = {
       dark: "rgba(15, 93, 59, 0.85)",
@@ -343,7 +344,7 @@
       settings: {
         targetDark: 3000,
         targetLight: 1000,
-        spawnRate: 18,
+        spawnRate: 40,
         restitution: 0.4,
         friction: 0.1,
         sizeBase: 2,
@@ -478,6 +479,11 @@
         state.engine.gravity.x = x;
         state.engine.gravity.y = y;
       };
+
+      if (!ENABLE_TILT_CONTROLS) {
+        updateGravity(state.gravity.x, state.gravity.y);
+        return;
+      }
 
       if (window.DeviceOrientationEvent) {
         window.addEventListener("deviceorientation", (event) => {
