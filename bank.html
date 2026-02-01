@@ -29,6 +29,13 @@
       color: #111;
     }
 
+    .layout {
+      display: flex;
+      align-items: flex-start;
+      gap: 28px;
+      padding: 24px;
+    }
+
     .phone-shell {
       width: var(--screen-width);
       height: var(--screen-height);
@@ -152,50 +159,157 @@
       pointer-events: none;
       transition: transform 0.08s linear;
     }
+
+    .control-panel {
+      width: 300px;
+      background: #ffffff;
+      border-radius: 18px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .control-panel h2 {
+      font-size: 16px;
+      margin: 0;
+    }
+
+    .control-panel p {
+      margin: 0;
+      font-size: 12px;
+      color: #5f6368;
+      line-height: 1.4;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
+    }
+
+    .control-group label {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-weight: 500;
+    }
+
+    .control-group input[type="range"] {
+      width: 100%;
+    }
+
+    .control-group input[type="number"] {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #d8d8d8;
+      font-size: 13px;
+    }
+
+    .control-panel button {
+      border: none;
+      background: #0f5d3b;
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
-  <div class="phone-shell" id="phone">
-    <canvas id="physics" width="393" height="852"></canvas>
-    <div class="level-line" id="levelLine"></div>
-    <div class="ui-layer">
-      <div class="top-bar">
-        <div class="icon-btn" aria-label="Назад">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M15 5l-7 7 7 7" />
-          </svg>
+  <div class="layout">
+    <div class="phone-shell" id="phone">
+      <canvas id="physics" width="393" height="852"></canvas>
+      <div class="level-line" id="levelLine"></div>
+      <div class="ui-layer">
+        <div class="top-bar">
+          <div class="icon-btn" aria-label="Назад">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 5l-7 7 7 7" />
+            </svg>
+          </div>
+          <div class="icon-btn" aria-label="Настройки">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" />
+              <path d="M19.4 15a7.6 7.6 0 0 0 .1-1 7.6 7.6 0 0 0-.1-1l2-1.5-2-3.5-2.3.7a7.2 7.2 0 0 0-1.7-1l-.4-2.4h-4l-.4 2.4a7.2 7.2 0 0 0-1.7 1l-2.3-.7-2 3.5 2 1.5a7.6 7.6 0 0 0-.1 1 7.6 7.6 0 0 0 .1 1l-2 1.5 2 3.5 2.3-.7a7.2 7.2 0 0 0 1.7 1l.4 2.4h4l.4-2.4a7.2 7.2 0 0 0 1.7-1l2.3.7 2-3.5-2-1.5z" />
+            </svg>
+          </div>
         </div>
-        <div class="icon-btn" aria-label="Настройки">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" />
-            <path d="M19.4 15a7.6 7.6 0 0 0 .1-1 7.6 7.6 0 0 0-.1-1l2-1.5-2-3.5-2.3.7a7.2 7.2 0 0 0-1.7-1l-.4-2.4h-4l-.4 2.4a7.2 7.2 0 0 0-1.7 1l-2.3-.7-2 3.5 2 1.5a7.6 7.6 0 0 0-.1 1 7.6 7.6 0 0 0 .1 1l-2 1.5 2 3.5 2.3-.7a7.2 7.2 0 0 0 1.7 1l.4 2.4h4l.4-2.4a7.2 7.2 0 0 0 1.7-1l2.3.7 2-3.5-2-1.5z" />
-          </svg>
+
+        <div class="content-block">
+          <div class="label">На счету сейчас</div>
+          <div class="amount">1 277 200 ₽</div>
+          <div class="profit">+277 200 ₽ прибыли</div>
         </div>
-      </div>
 
-      <div class="content-block">
-        <div class="label">На счету сейчас</div>
-        <div class="amount">1 277 200 ₽</div>
-        <div class="profit">+277 200 ₽ прибыли</div>
-      </div>
+        <div class="projection-block">
+          <div class="projection-label">Через 2 года и 3 месяца</div>
+          <div class="projection-value">1 720 000 ₽</div>
+        </div>
 
-      <div class="projection-block">
-        <div class="projection-label">Через 2 года и 3 месяца</div>
-        <div class="projection-value">1 720 000 ₽</div>
-      </div>
-
-      <div class="bottom-action">
-        <button type="button">Хорошо.</button>
+        <div class="bottom-action">
+          <button type="button">Хорошо.</button>
+        </div>
       </div>
     </div>
+
+    <aside class="control-panel">
+      <h2>Контролы симуляции</h2>
+      <p>Частицы останавливаются, когда заполняют область верхних иконок. Линия — только индикатор уровня.</p>
+
+      <div class="control-group">
+        <label for="darkCount">Темные частицы <span id="darkCountValue">3000</span></label>
+        <input type="number" id="darkCount" min="0" max="6000" value="3000" />
+      </div>
+
+      <div class="control-group">
+        <label for="lightCount">Светлые частицы <span id="lightCountValue">1000</span></label>
+        <input type="number" id="lightCount" min="0" max="6000" value="1000" />
+      </div>
+
+      <div class="control-group">
+        <label for="spawnRate">Скорость появления <span id="spawnRateValue">18</span></label>
+        <input type="range" id="spawnRate" min="2" max="40" value="18" />
+      </div>
+
+      <div class="control-group">
+        <label for="gravityX">Гравитация X <span id="gravityXValue">0.00</span></label>
+        <input type="range" id="gravityX" min="-1" max="1" step="0.05" value="0" />
+      </div>
+
+      <div class="control-group">
+        <label for="gravityY">Гравитация Y <span id="gravityYValue">1.00</span></label>
+        <input type="range" id="gravityY" min="-1" max="1" step="0.05" value="1" />
+      </div>
+
+      <div class="control-group">
+        <label for="restitution">Упругость <span id="restitutionValue">0.40</span></label>
+        <input type="range" id="restitution" min="0" max="1" step="0.05" value="0.4" />
+      </div>
+
+      <div class="control-group">
+        <label for="friction">Трение <span id="frictionValue">0.10</span></label>
+        <input type="range" id="friction" min="0" max="1" step="0.05" value="0.1" />
+      </div>
+
+      <div class="control-group">
+        <label for="sizeRange">Размер частиц <span id="sizeRangeValue">2–4</span></label>
+        <input type="range" id="sizeRange" min="1" max="6" step="0.5" value="2" />
+      </div>
+
+      <button type="button" id="restartSim">Перезапустить симуляцию</button>
+    </aside>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
   <script>
     const SCREEN_WIDTH = 393;
     const SCREEN_HEIGHT = 852;
-    const MAX_PARTICLES = 1000;
-    const SPAWN_RATE = 14;
+    const TOP_STOP_Y = 78;
 
     const colors = {
       dark: "rgba(15, 93, 59, 0.85)",
@@ -207,7 +321,19 @@
       render: null,
       runner: null,
       particles: [],
+      staticBodies: [],
+      animationStopped: false,
       gravity: { x: 0, y: 1 },
+      frameId: null,
+      counts: { dark: 0, light: 0 },
+      settings: {
+        targetDark: 3000,
+        targetLight: 1000,
+        spawnRate: 18,
+        restitution: 0.4,
+        friction: 0.1,
+        sizeBase: 2,
+      },
     };
 
     function setupUI() {
@@ -253,7 +379,8 @@
         render: { visible: false },
       });
 
-      World.add(engine.world, [...boundaries, topBarCollider, centralCollider, buttonCollider]);
+      state.staticBodies = [...boundaries, topBarCollider, centralCollider, buttonCollider];
+      World.add(engine.world, state.staticBodies);
       Render.run(render);
       const runner = Runner.create();
       Runner.run(runner, engine);
@@ -265,26 +392,46 @@
 
     function spawnParticles() {
       const { Bodies, World } = Matter;
-      const spawnCount = Math.ceil(SPAWN_RATE / 2);
+      const remainingDark = state.settings.targetDark - state.counts.dark;
+      const remainingLight = state.settings.targetLight - state.counts.light;
+      const remainingTotal = remainingDark + remainingLight;
+      if (remainingTotal <= 0) {
+        return;
+      }
+      const spawnCount = Math.min(remainingTotal, Math.ceil(state.settings.spawnRate / 2));
       for (let i = 0; i < spawnCount; i++) {
-        if (state.particles.length >= MAX_PARTICLES) {
-          const oldest = state.particles.shift();
-          World.remove(state.engine.world, oldest);
+        const totalRemaining = (state.settings.targetDark - state.counts.dark) + (state.settings.targetLight - state.counts.light);
+        if (totalRemaining <= 0) {
+          break;
         }
-        const isDark = Math.random() < 0.7;
-        const radius = 2 + Math.random() * 2;
+        const darkRemaining = state.settings.targetDark - state.counts.dark;
+        const lightRemaining = state.settings.targetLight - state.counts.light;
+        const darkWeight = darkRemaining / totalRemaining;
+        const isDark = Math.random() < darkWeight;
+        if (isDark && darkRemaining <= 0) {
+          continue;
+        }
+        if (!isDark && lightRemaining <= 0) {
+          continue;
+        }
+        const radius = state.settings.sizeBase + Math.random() * 2;
         const particle = Bodies.circle(
           20 + Math.random() * (SCREEN_WIDTH - 40),
           -20 - Math.random() * 80,
           radius,
           {
-            restitution: 0.4,
-            friction: 0.1,
+            restitution: state.settings.restitution,
+            friction: state.settings.friction,
             density: isDark ? 0.008 : 0.002,
             render: { fillStyle: isDark ? colors.dark : colors.light },
           }
         );
         state.particles.push(particle);
+        if (isDark) {
+          state.counts.dark += 1;
+        } else {
+          state.counts.light += 1;
+        }
         World.add(state.engine.world, particle);
       }
     }
@@ -331,15 +478,98 @@
       });
     }
 
+    function setupControlPanel() {
+      const updateValue = (inputId, outputId, format = (value) => value) => {
+        const input = document.getElementById(inputId);
+        const output = document.getElementById(outputId);
+        const handler = () => {
+          if (!output) {
+            return;
+          }
+          output.textContent = format(input.value);
+        };
+        input.addEventListener("input", handler);
+        handler();
+      };
+
+      updateValue("darkCount", "darkCountValue");
+      updateValue("lightCount", "lightCountValue");
+      updateValue("spawnRate", "spawnRateValue");
+      updateValue("gravityX", "gravityXValue", (value) => Number(value).toFixed(2));
+      updateValue("gravityY", "gravityYValue", (value) => Number(value).toFixed(2));
+      updateValue("restitution", "restitutionValue", (value) => Number(value).toFixed(2));
+      updateValue("friction", "frictionValue", (value) => Number(value).toFixed(2));
+      updateValue("sizeRange", "sizeRangeValue", (value) => `${value}–${(Number(value) + 2).toFixed(1)}`);
+
+      const applyGravityFromControls = () => {
+        const x = parseFloat(document.getElementById("gravityX").value);
+        const y = parseFloat(document.getElementById("gravityY").value);
+        state.gravity.x = x;
+        state.gravity.y = y;
+        state.engine.gravity.x = x;
+        state.engine.gravity.y = y;
+      };
+
+      document.getElementById("gravityX").addEventListener("input", applyGravityFromControls);
+      document.getElementById("gravityY").addEventListener("input", applyGravityFromControls);
+
+      document.getElementById("restartSim").addEventListener("click", () => {
+        state.settings.targetDark = parseInt(document.getElementById("darkCount").value, 10) || 0;
+        state.settings.targetLight = parseInt(document.getElementById("lightCount").value, 10) || 0;
+        state.settings.spawnRate = parseInt(document.getElementById("spawnRate").value, 10) || 1;
+        state.settings.restitution = parseFloat(document.getElementById("restitution").value);
+        state.settings.friction = parseFloat(document.getElementById("friction").value);
+        state.settings.sizeBase = parseFloat(document.getElementById("sizeRange").value);
+        applyGravityFromControls();
+        resetSimulation();
+      });
+    }
+
+    function resetSimulation() {
+      const { World, Runner } = Matter;
+      state.particles.forEach((particle) => World.remove(state.engine.world, particle));
+      state.particles = [];
+      state.counts = { dark: 0, light: 0 };
+      state.animationStopped = false;
+      if (state.frameId) {
+        cancelAnimationFrame(state.frameId);
+        state.frameId = null;
+      }
+      Runner.run(state.runner, state.engine);
+      tick();
+    }
+
+    function checkStopCondition() {
+      if (state.particles.length === 0) {
+        return false;
+      }
+      let highest = SCREEN_HEIGHT;
+      for (const particle of state.particles) {
+        if (particle.position.y < highest) {
+          highest = particle.position.y;
+        }
+      }
+      return highest <= TOP_STOP_Y;
+    }
+
     function tick() {
+      if (state.animationStopped) {
+        return;
+      }
       spawnParticles();
       updateLevelLine();
-      requestAnimationFrame(tick);
+      if (checkStopCondition()) {
+        Matter.Runner.stop(state.runner);
+        state.animationStopped = true;
+        return;
+      }
+      state.frameId = requestAnimationFrame(tick);
     }
 
     setupUI();
     setupPhysics();
     setupTiltControls();
+    setupControlPanel();
     tick();
   </script>
 </body>
