@@ -88,6 +88,7 @@
       stroke-width: 2;
       stroke-linecap: round;
       stroke-linejoin: round;
+      display: block;
     }
 
     .content-block {
@@ -157,7 +158,19 @@
       z-index: 2;
       border-radius: 999px;
       pointer-events: none;
-      transition: transform 0.08s linear;
+      top: 78px;
+    }
+
+    .level-date {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      top: 52px;
+      font-size: 12px;
+      text-align: center;
+      color: #9aa0a6;
+      z-index: 2;
+      pointer-events: none;
     }
 
     .control-panel {
@@ -224,6 +237,7 @@
   <div class="layout">
     <div class="phone-shell" id="phone">
       <canvas id="physics" width="393" height="852"></canvas>
+      <div class="level-date" id="levelDate"></div>
       <div class="level-line" id="levelLine"></div>
       <div class="ui-layer">
         <div class="top-bar">
@@ -309,7 +323,7 @@
   <script>
     const SCREEN_WIDTH = 393;
     const SCREEN_HEIGHT = 852;
-    const TOP_STOP_Y = 78;
+    const LEVEL_LINE_Y = 78;
 
     const colors = {
       dark: "rgba(15, 93, 59, 0.85)",
@@ -438,14 +452,23 @@
 
     function updateLevelLine() {
       const line = document.getElementById("levelLine");
-      if (!line || state.particles.length === 0) {
+      if (!line) {
         return;
       }
-      const positions = state.particles.map((particle) => particle.position.y);
-      positions.sort((a, b) => a - b);
-      const index = Math.min(Math.floor(positions.length * 0.1), positions.length - 1);
-      const levelY = Math.max(40, Math.min(positions[index], SCREEN_HEIGHT - 80));
-      line.style.transform = `translateY(${levelY}px)`;
+      line.style.top = `${LEVEL_LINE_Y}px`;
+    }
+
+    function setLevelDate() {
+      const levelDate = document.getElementById("levelDate");
+      if (!levelDate) {
+        return;
+      }
+      const formatter = new Intl.DateTimeFormat("ru-RU", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      });
+      levelDate.textContent = formatter.format(new Date());
     }
 
     function setupTiltControls() {
@@ -540,16 +563,7 @@
     }
 
     function checkStopCondition() {
-      if (state.particles.length === 0) {
-        return false;
-      }
-      let highest = SCREEN_HEIGHT;
-      for (const particle of state.particles) {
-        if (particle.position.y < highest) {
-          highest = particle.position.y;
-        }
-      }
-      return highest <= TOP_STOP_Y;
+      return false;
     }
 
     function tick() {
@@ -570,6 +584,7 @@
     setupPhysics();
     setupTiltControls();
     setupControlPanel();
+    setLevelDate();
     tick();
   </script>
 </body>
