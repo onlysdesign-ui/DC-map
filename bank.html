@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bank Screen Demo</title>
+  <style>
+    :root {
+      --screen-width: 393px;
+      --screen-height: 852px;
+      --gray-700: #5f6368;
+      --green-dark: #0f5d3b;
+      --green-light: #7cd88b;
+      --profit: #6ecf83;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f6f6f6;
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      color: #111;
+    }
+
+    .phone-shell {
+      width: var(--screen-width);
+      height: var(--screen-height);
+      background: #fff;
+      border-radius: 28px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.18);
+    }
+
+    canvas#physics {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    .ui-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      padding: 28px 24px 30px;
+      pointer-events: none;
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 40px;
+    }
+
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+    }
+
+    .icon-btn svg {
+      width: 20px;
+      height: 20px;
+      stroke: var(--gray-700);
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .content-block {
+      margin-top: 170px;
+      text-align: center;
+    }
+
+    .content-block .label {
+      font-size: 15px;
+      color: #6f6f6f;
+      margin-bottom: 8px;
+    }
+
+    .content-block .amount {
+      font-size: 40px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    .content-block .profit {
+      font-size: 16px;
+      color: var(--profit);
+    }
+
+    .projection-block {
+      margin-top: 34px;
+      text-align: center;
+      color: #1a1a1a;
+      opacity: 0.5;
+      line-height: 1.35;
+    }
+
+    .projection-block .projection-label {
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+
+    .projection-block .projection-value {
+      font-size: 24px;
+      font-weight: 500;
+    }
+
+    .bottom-action {
+      margin-top: auto;
+      display: flex;
+      justify-content: center;
+    }
+
+    .bottom-action button {
+      pointer-events: auto;
+      border: none;
+      background: #111;
+      color: #fff;
+      font-size: 16px;
+      padding: 14px 44px;
+      border-radius: 22px;
+      font-weight: 500;
+    }
+
+    .level-line {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      height: 2px;
+      background: rgba(15, 93, 59, 0.25);
+      z-index: 2;
+      border-radius: 999px;
+      pointer-events: none;
+      transition: transform 0.08s linear;
+    }
+  </style>
+</head>
+<body>
+  <div class="phone-shell" id="phone">
+    <canvas id="physics" width="393" height="852"></canvas>
+    <div class="level-line" id="levelLine"></div>
+    <div class="ui-layer">
+      <div class="top-bar">
+        <div class="icon-btn" aria-label="Назад">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
+        </div>
+        <div class="icon-btn" aria-label="Настройки">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" />
+            <path d="M19.4 15a7.6 7.6 0 0 0 .1-1 7.6 7.6 0 0 0-.1-1l2-1.5-2-3.5-2.3.7a7.2 7.2 0 0 0-1.7-1l-.4-2.4h-4l-.4 2.4a7.2 7.2 0 0 0-1.7 1l-2.3-.7-2 3.5 2 1.5a7.6 7.6 0 0 0-.1 1 7.6 7.6 0 0 0 .1 1l-2 1.5 2 3.5 2.3-.7a7.2 7.2 0 0 0 1.7 1l.4 2.4h4l.4-2.4a7.2 7.2 0 0 0 1.7-1l2.3.7 2-3.5-2-1.5z" />
+          </svg>
+        </div>
+      </div>
+
+      <div class="content-block">
+        <div class="label">На счету сейчас</div>
+        <div class="amount">1 277 200 ₽</div>
+        <div class="profit">+277 200 ₽ прибыли</div>
+      </div>
+
+      <div class="projection-block">
+        <div class="projection-label">Через 2 года и 3 месяца</div>
+        <div class="projection-value">1 720 000 ₽</div>
+      </div>
+
+      <div class="bottom-action">
+        <button type="button">Хорошо.</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
+  <script>
+    const SCREEN_WIDTH = 393;
+    const SCREEN_HEIGHT = 852;
+    const MAX_PARTICLES = 1000;
+    const SPAWN_RATE = 14;
+
+    const colors = {
+      dark: "rgba(15, 93, 59, 0.85)",
+      light: "rgba(124, 216, 139, 0.78)",
+    };
+
+    const state = {
+      engine: null,
+      render: null,
+      runner: null,
+      particles: [],
+      gravity: { x: 0, y: 1 },
+    };
+
+    function setupUI() {
+      const phone = document.getElementById("phone");
+      phone.style.width = `${SCREEN_WIDTH}px`;
+      phone.style.height = `${SCREEN_HEIGHT}px`;
+    }
+
+    function setupPhysics() {
+      const { Engine, Render, Runner, World, Bodies } = Matter;
+      const engine = Engine.create({ enableSleeping: false });
+      const render = Render.create({
+        canvas: document.getElementById("physics"),
+        engine,
+        options: {
+          width: SCREEN_WIDTH,
+          height: SCREEN_HEIGHT,
+          background: "transparent",
+          wireframes: false,
+          pixelRatio: window.devicePixelRatio || 1,
+        },
+      });
+
+      const boundaries = [
+        Bodies.rectangle(SCREEN_WIDTH / 2, -20, SCREEN_WIDTH, 40, { isStatic: true }),
+        Bodies.rectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT + 20, SCREEN_WIDTH, 40, { isStatic: true }),
+        Bodies.rectangle(-20, SCREEN_HEIGHT / 2, 40, SCREEN_HEIGHT, { isStatic: true }),
+        Bodies.rectangle(SCREEN_WIDTH + 20, SCREEN_HEIGHT / 2, 40, SCREEN_HEIGHT, { isStatic: true }),
+      ];
+
+      const topBarCollider = Bodies.rectangle(SCREEN_WIDTH / 2, 48, SCREEN_WIDTH - 40, 60, {
+        isStatic: true,
+        render: { visible: false },
+      });
+
+      const centralCollider = Bodies.rectangle(SCREEN_WIDTH / 2, 310, SCREEN_WIDTH - 80, 140, {
+        isStatic: true,
+        render: { visible: false },
+      });
+
+      const buttonCollider = Bodies.rectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 70, SCREEN_WIDTH - 120, 80, {
+        isStatic: true,
+        render: { visible: false },
+      });
+
+      World.add(engine.world, [...boundaries, topBarCollider, centralCollider, buttonCollider]);
+      Render.run(render);
+      const runner = Runner.create();
+      Runner.run(runner, engine);
+
+      state.engine = engine;
+      state.render = render;
+      state.runner = runner;
+    }
+
+    function spawnParticles() {
+      const { Bodies, World } = Matter;
+      const spawnCount = Math.ceil(SPAWN_RATE / 2);
+      for (let i = 0; i < spawnCount; i++) {
+        if (state.particles.length >= MAX_PARTICLES) {
+          const oldest = state.particles.shift();
+          World.remove(state.engine.world, oldest);
+        }
+        const isDark = Math.random() < 0.7;
+        const radius = 2 + Math.random() * 2;
+        const particle = Bodies.circle(
+          20 + Math.random() * (SCREEN_WIDTH - 40),
+          -20 - Math.random() * 80,
+          radius,
+          {
+            restitution: 0.4,
+            friction: 0.1,
+            density: isDark ? 0.008 : 0.002,
+            render: { fillStyle: isDark ? colors.dark : colors.light },
+          }
+        );
+        state.particles.push(particle);
+        World.add(state.engine.world, particle);
+      }
+    }
+
+    function updateLevelLine() {
+      const line = document.getElementById("levelLine");
+      if (!line || state.particles.length === 0) {
+        return;
+      }
+      const positions = state.particles.map((particle) => particle.position.y);
+      positions.sort((a, b) => a - b);
+      const index = Math.min(Math.floor(positions.length * 0.1), positions.length - 1);
+      const levelY = Math.max(40, Math.min(positions[index], SCREEN_HEIGHT - 80));
+      line.style.transform = `translateY(${levelY}px)`;
+    }
+
+    function setupTiltControls() {
+      const updateGravity = (x, y) => {
+        state.gravity.x = x;
+        state.gravity.y = y;
+        state.engine.gravity.x = x;
+        state.engine.gravity.y = y;
+      };
+
+      if (window.DeviceOrientationEvent) {
+        window.addEventListener("deviceorientation", (event) => {
+          const gamma = event.gamma ?? 0;
+          const beta = event.beta ?? 0;
+          const x = Math.max(-1, Math.min(1, gamma / 30));
+          const y = Math.max(-1, Math.min(1, beta / 30));
+          updateGravity(x, y);
+        });
+      }
+
+      window.addEventListener("mousemove", (event) => {
+        const rect = document.getElementById("phone").getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dx = (event.clientX - cx) / (rect.width / 2);
+        const dy = (event.clientY - cy) / (rect.height / 2);
+        const x = Math.max(-1, Math.min(1, dx));
+        const y = Math.max(-1, Math.min(1, dy));
+        updateGravity(x, y);
+      });
+    }
+
+    function tick() {
+      spawnParticles();
+      updateLevelLine();
+      requestAnimationFrame(tick);
+    }
+
+    setupUI();
+    setupPhysics();
+    setupTiltControls();
+    tick();
+  </script>
+</body>
+</html>
