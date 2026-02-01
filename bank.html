@@ -8,10 +8,10 @@
     :root {
       --screen-width: 393px;
       --screen-height: 852px;
-      --gray-700: #5f6368;
-      --green-dark: #0f5d3b;
-      --green-light: #7cd88b;
-      --profit: #6ecf83;
+      --text-dark: #111111;
+      --text-muted: #6f6f6f;
+      --green-dark: #0b5d3b;
+      --green-light: #34d399;
     }
 
     * {
@@ -24,26 +24,19 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #f6f6f6;
+      background: #ffffff;
       font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-      color: #111;
-    }
-
-    .layout {
-      display: flex;
-      align-items: flex-start;
-      gap: 28px;
-      padding: 24px;
+      color: var(--text-dark);
     }
 
     .phone-shell {
       width: var(--screen-width);
       height: var(--screen-height);
-      background: #fff;
+      background: #ffffff;
       border-radius: 28px;
       position: relative;
       overflow: hidden;
-      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.18);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
     }
 
     canvas#physics {
@@ -83,7 +76,7 @@
     .icon-btn svg {
       width: 20px;
       height: 20px;
-      stroke: var(--gray-700);
+      stroke: #5f6368;
       fill: none;
       stroke-width: 2;
       stroke-linecap: round;
@@ -98,7 +91,7 @@
 
     .content-block .label {
       font-size: 15px;
-      color: #6f6f6f;
+      color: var(--text-muted);
       margin-bottom: 8px;
     }
 
@@ -111,7 +104,7 @@
 
     .content-block .profit {
       font-size: 16px;
-      color: var(--profit);
+      color: var(--green-light);
     }
 
     .projection-block {
@@ -153,203 +146,95 @@
       position: absolute;
       left: 16px;
       right: 16px;
-      height: 2px;
-      background: rgba(15, 93, 59, 0.25);
+      height: 1px;
+      background: rgba(11, 93, 59, 0.25);
       z-index: 2;
       border-radius: 999px;
       pointer-events: none;
       top: 78px;
     }
-
-    .level-date {
-      position: absolute;
-      left: 16px;
-      right: 16px;
-      top: 52px;
-      font-size: 12px;
-      text-align: center;
-      color: #9aa0a6;
-      z-index: 2;
-      pointer-events: none;
-    }
-
-    .control-panel {
-      width: 300px;
-      background: #ffffff;
-      border-radius: 18px;
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
-      padding: 18px 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .control-panel h2 {
-      font-size: 16px;
-      margin: 0;
-    }
-
-    .control-panel p {
-      margin: 0;
-      font-size: 12px;
-      color: #5f6368;
-      line-height: 1.4;
-    }
-
-    .control-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      font-size: 13px;
-    }
-
-    .control-group label {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      font-weight: 500;
-    }
-
-    .control-group input[type="range"] {
-      width: 100%;
-    }
-
-    .control-group input[type="number"] {
-      width: 100%;
-      padding: 6px 8px;
-      border-radius: 8px;
-      border: 1px solid #d8d8d8;
-      font-size: 13px;
-    }
-
-    .control-panel button {
-      border: none;
-      background: #0f5d3b;
-      color: #fff;
-      padding: 10px 12px;
-      border-radius: 10px;
-      font-weight: 600;
-      cursor: pointer;
-    }
   </style>
 </head>
 <body>
-  <div class="layout">
-    <div class="phone-shell" id="phone">
-      <canvas id="physics" width="393" height="852"></canvas>
-      <div class="level-date" id="levelDate"></div>
-      <div class="level-line" id="levelLine"></div>
-      <div class="ui-layer">
-        <div class="top-bar">
-          <div class="icon-btn" aria-label="Назад">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M15 5l-7 7 7 7" />
-            </svg>
-          </div>
-          <div class="icon-btn" aria-label="Настройки">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" />
-              <path d="M19.4 15a7.6 7.6 0 0 0 .1-1 7.6 7.6 0 0 0-.1-1l2-1.5-2-3.5-2.3.7a7.2 7.2 0 0 0-1.7-1l-.4-2.4h-4l-.4 2.4a7.2 7.2 0 0 0-1.7 1l-2.3-.7-2 3.5 2 1.5a7.6 7.6 0 0 0-.1 1 7.6 7.6 0 0 0 .1 1l-2 1.5 2 3.5 2.3-.7a7.2 7.2 0 0 0 1.7 1l.4 2.4h4l.4-2.4a7.2 7.2 0 0 0 1.7-1l2.3.7 2-3.5-2-1.5z" />
-            </svg>
-          </div>
+  <div class="phone-shell" id="phone">
+    <canvas id="physics" width="393" height="852"></canvas>
+    <div class="level-line" id="levelLine"></div>
+    <div class="ui-layer">
+      <div class="top-bar" id="topBar">
+        <div class="icon-btn" aria-label="Назад">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
         </div>
+        <div class="icon-btn" aria-label="Настройки">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" />
+            <path d="M19.4 15a7.6 7.6 0 0 0 .1-1 7.6 7.6 0 0 0-.1-1l2-1.5-2-3.5-2.3.7a7.2 7.2 0 0 0-1.7-1l-.4-2.4h-4l-.4 2.4a7.2 7.2 0 0 0-1.7 1l-2.3-.7-2 3.5 2 1.5a7.6 7.6 0 0 0-.1 1 7.6 7.6 0 0 0 .1 1l-2 1.5 2 3.5 2.3-.7a7.2 7.2 0 0 0 1.7 1l.4 2.4h4l.4-2.4a7.2 7.2 0 0 0 1.7-1l2.3.7 2-3.5-2-1.5z" />
+          </svg>
+        </div>
+      </div>
 
-        <div class="content-block">
-          <div class="label">На счету сейчас</div>
-          <div class="amount">1 277 200 ₽</div>
-          <div class="profit">+277 200 ₽ прибыли</div>
-        </div>
+      <div class="content-block" id="contentBlock">
+        <div class="label">На счету сейчас</div>
+        <div class="amount">1 277 200 ₽</div>
+        <div class="profit">+277 200 ₽ прибыли</div>
+      </div>
 
-        <div class="projection-block">
-          <div class="projection-label">Через 2 года и 3 месяца</div>
-          <div class="projection-value">1 720 000 ₽</div>
-        </div>
+      <div class="projection-block">
+        <div class="projection-label">Через 2 года и 3 месяца</div>
+        <div class="projection-value">1 720 000 ₽</div>
+      </div>
 
-        <div class="bottom-action">
-          <button type="button">Хорошо.</button>
-        </div>
+      <div class="bottom-action" id="bottomAction">
+        <button type="button">Хорошо.</button>
       </div>
     </div>
-
-    <aside class="control-panel">
-      <h2>Контролы симуляции</h2>
-      <p>Частицы останавливаются, когда заполняют область верхних иконок. Линия — только индикатор уровня.</p>
-
-      <div class="control-group">
-        <label for="darkCount">Темные частицы <span id="darkCountValue">3000</span></label>
-        <input type="number" id="darkCount" min="0" max="6000" value="3000" />
-      </div>
-
-      <div class="control-group">
-        <label for="lightCount">Светлые частицы <span id="lightCountValue">1000</span></label>
-        <input type="number" id="lightCount" min="0" max="6000" value="1000" />
-      </div>
-
-      <div class="control-group">
-        <label for="spawnRate">Скорость появления <span id="spawnRateValue">40</span></label>
-        <input type="range" id="spawnRate" min="2" max="80" value="40" />
-      </div>
-
-      <div class="control-group">
-        <label for="gravityX">Гравитация X <span id="gravityXValue">0.00</span></label>
-        <input type="range" id="gravityX" min="-1" max="1" step="0.05" value="0" />
-      </div>
-
-      <div class="control-group">
-        <label for="gravityY">Гравитация Y <span id="gravityYValue">1.00</span></label>
-        <input type="range" id="gravityY" min="-1" max="1" step="0.05" value="1" />
-      </div>
-
-      <div class="control-group">
-        <label for="restitution">Упругость <span id="restitutionValue">0.40</span></label>
-        <input type="range" id="restitution" min="0" max="1" step="0.05" value="0.4" />
-      </div>
-
-      <div class="control-group">
-        <label for="friction">Трение <span id="frictionValue">0.10</span></label>
-        <input type="range" id="friction" min="0" max="1" step="0.05" value="0.1" />
-      </div>
-
-      <div class="control-group">
-        <label for="sizeRange">Размер частиц <span id="sizeRangeValue">2–4</span></label>
-        <input type="range" id="sizeRange" min="1" max="6" step="0.5" value="2" />
-      </div>
-
-      <button type="button" id="restartSim">Перезапустить симуляцию</button>
-    </aside>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
   <script>
     const SCREEN_WIDTH = 393;
     const SCREEN_HEIGHT = 852;
-    const LEVEL_LINE_Y = 78;
-    const ENABLE_TILT_CONTROLS = false;
+    const MAX_PARTICLES = 1200;
+    const CELL_SIZE = 12;
+    const COLLISION_ITERATIONS = 5;
 
     const colors = {
-      dark: "rgba(15, 93, 59, 0.85)",
-      light: "rgba(124, 216, 139, 0.78)",
+      dark: "rgba(11, 93, 59, 0.9)",
+      light: "rgba(52, 211, 153, 0.82)",
     };
 
     const state = {
-      engine: null,
-      render: null,
-      runner: null,
+      canvas: null,
+      ctx: null,
+      width: SCREEN_WIDTH,
+      height: SCREEN_HEIGHT,
       particles: [],
-      staticBodies: [],
-      animationStopped: false,
-      gravity: { x: 0, y: 1 },
-      frameId: null,
-      counts: { dark: 0, light: 0 },
-      settings: {
-        targetDark: 3000,
-        targetLight: 1000,
-        spawnRate: 40,
-        restitution: 0.4,
-        friction: 0.1,
-        sizeBase: 2,
+      grid: new Map(),
+      colliders: [],
+      lastTime: 0,
+      elapsed: 0,
+      levelY: SCREEN_HEIGHT - 120,
+      tilt: { x: 0, y: 0 },
+      spawn: {
+        darkAccumulator: 0,
+        lightAccumulator: 0,
       },
     };
+
+    function setupCanvas() {
+      const canvas = document.getElementById("physics");
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = SCREEN_WIDTH * dpr;
+      canvas.height = SCREEN_HEIGHT * dpr;
+      canvas.style.width = `${SCREEN_WIDTH}px`;
+      canvas.style.height = `${SCREEN_HEIGHT}px`;
+      const ctx = canvas.getContext("2d");
+      ctx.scale(dpr, dpr);
+      state.canvas = canvas;
+      state.ctx = ctx;
+      state.width = SCREEN_WIDTH;
+      state.height = SCREEN_HEIGHT;
+    }
 
     function setupUI() {
       const phone = document.getElementById("phone");
@@ -357,141 +242,275 @@
       phone.style.height = `${SCREEN_HEIGHT}px`;
     }
 
-    function setupPhysics() {
-      const { Engine, Render, Runner, World, Bodies } = Matter;
-      const engine = Engine.create({ enableSleeping: false });
-      const render = Render.create({
-        canvas: document.getElementById("physics"),
-        engine,
-        options: {
-          width: SCREEN_WIDTH,
-          height: SCREEN_HEIGHT,
-          background: "transparent",
-          wireframes: false,
-          pixelRatio: window.devicePixelRatio || 1,
-        },
+    function initColliders() {
+      const phoneRect = document.getElementById("phone").getBoundingClientRect();
+      const topRect = document.getElementById("topBar").getBoundingClientRect();
+      const contentRect = document.getElementById("contentBlock").getBoundingClientRect();
+      const buttonRect = document.getElementById("bottomAction").getBoundingClientRect();
+
+      const toLocal = (rect) => ({
+        x: rect.left - phoneRect.left,
+        y: rect.top - phoneRect.top,
+        w: rect.width,
+        h: rect.height,
       });
 
-      const boundaries = [
-        Bodies.rectangle(SCREEN_WIDTH / 2, -20, SCREEN_WIDTH, 40, { isStatic: true }),
-        Bodies.rectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT + 20, SCREEN_WIDTH, 40, { isStatic: true }),
-        Bodies.rectangle(-20, SCREEN_HEIGHT / 2, 40, SCREEN_HEIGHT, { isStatic: true }),
-        Bodies.rectangle(SCREEN_WIDTH + 20, SCREEN_HEIGHT / 2, 40, SCREEN_HEIGHT, { isStatic: true }),
+      state.colliders = [
+        toLocal(topRect),
+        toLocal(contentRect),
+        toLocal(buttonRect),
       ];
-
-      const topBarCollider = Bodies.rectangle(SCREEN_WIDTH / 2, 48, SCREEN_WIDTH - 40, 60, {
-        isStatic: true,
-        render: { visible: false },
-      });
-
-      const centralCollider = Bodies.rectangle(SCREEN_WIDTH / 2, 310, SCREEN_WIDTH - 80, 140, {
-        isStatic: true,
-        render: { visible: false },
-      });
-
-      const buttonCollider = Bodies.rectangle(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 70, SCREEN_WIDTH - 120, 80, {
-        isStatic: true,
-        render: { visible: false },
-      });
-
-      state.staticBodies = [...boundaries, topBarCollider, centralCollider, buttonCollider];
-      World.add(engine.world, state.staticBodies);
-      Render.run(render);
-      const runner = Runner.create();
-      Runner.run(runner, engine);
-
-      state.engine = engine;
-      state.render = render;
-      state.runner = runner;
     }
 
-    function spawnParticles() {
-      const { Bodies, World } = Matter;
-      const remainingDark = state.settings.targetDark - state.counts.dark;
-      const remainingLight = state.settings.targetLight - state.counts.light;
-      const remainingTotal = remainingDark + remainingLight;
-      if (remainingTotal <= 0) {
+    function spawnDark(dt) {
+      const rate = state.elapsed < 1.2 ? 80 + Math.random() * 60 : 20 + Math.random() * 25;
+      state.spawn.darkAccumulator += rate * dt;
+      const count = Math.floor(state.spawn.darkAccumulator);
+      if (count <= 0) {
         return;
       }
-      const spawnCount = Math.min(remainingTotal, Math.ceil(state.settings.spawnRate / 2));
-      for (let i = 0; i < spawnCount; i++) {
-        const totalRemaining = (state.settings.targetDark - state.counts.dark) + (state.settings.targetLight - state.counts.light);
-        if (totalRemaining <= 0) {
-          break;
-        }
-        const darkRemaining = state.settings.targetDark - state.counts.dark;
-        const lightRemaining = state.settings.targetLight - state.counts.light;
-        const darkWeight = darkRemaining / totalRemaining;
-        const isDark = Math.random() < darkWeight;
-        if (isDark && darkRemaining <= 0) {
-          continue;
-        }
-        if (!isDark && lightRemaining <= 0) {
-          continue;
-        }
-        const radius = state.settings.sizeBase + Math.random() * 2;
-        const particle = Bodies.circle(
-          20 + Math.random() * (SCREEN_WIDTH - 40),
-          -20 - Math.random() * 80,
-          radius,
-          {
-            restitution: state.settings.restitution,
-            friction: state.settings.friction,
-            density: isDark ? 0.008 : 0.002,
-            render: { fillStyle: isDark ? colors.dark : colors.light },
-          }
-        );
-        state.particles.push(particle);
-        if (isDark) {
-          state.counts.dark += 1;
-        } else {
-          state.counts.light += 1;
-        }
-        World.add(state.engine.world, particle);
+      state.spawn.darkAccumulator -= count;
+      for (let i = 0; i < count; i++) {
+        addParticle("dark");
       }
     }
 
-    function updateLevelLine() {
-      const line = document.getElementById("levelLine");
-      if (!line) {
+    function spawnLight(dt, allow) {
+      if (!allow) {
         return;
       }
-      line.style.top = `${LEVEL_LINE_Y}px`;
-    }
-
-    function setLevelDate() {
-      const levelDate = document.getElementById("levelDate");
-      if (!levelDate) {
+      const rate = 8 + Math.random() * 12;
+      state.spawn.lightAccumulator += rate * dt;
+      const count = Math.floor(state.spawn.lightAccumulator);
+      if (count <= 0) {
         return;
       }
-      const formatter = new Intl.DateTimeFormat("ru-RU", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      });
-      levelDate.textContent = formatter.format(new Date());
+      state.spawn.lightAccumulator -= count;
+      for (let i = 0; i < count; i++) {
+        addParticle("light");
+      }
     }
 
-    function setupTiltControls() {
-      const updateGravity = (x, y) => {
-        state.gravity.x = x;
-        state.gravity.y = y;
-        state.engine.gravity.x = x;
-        state.engine.gravity.y = y;
+    function addParticle(type) {
+      if (state.particles.length >= MAX_PARTICLES) {
+        trimParticles();
+      }
+      const radius = 2 + Math.random() * 2;
+      const x = 22 + Math.random() * (state.width - 44);
+      let y = state.height - 8 - Math.random() * 18;
+      let vy = -1.5 - Math.random() * 1.5;
+      let vx = (Math.random() - 0.5) * 0.6;
+
+      if (type === "light") {
+        y = state.height * 0.8 + Math.random() * 12;
+        vy = -2.2 - Math.random() * 2.4;
+        vx = (Math.random() - 0.5) * 0.9;
+      }
+
+      const particle = {
+        type,
+        x,
+        y,
+        px: x - vx,
+        py: y - vy,
+        radius,
+        invMass: type === "dark" ? 0.2 : 1,
+        damping: type === "dark" ? 0.98 : 0.985,
+        color: type === "dark" ? colors.dark : colors.light,
+        age: 0,
+        resting: 0,
       };
 
-      if (!ENABLE_TILT_CONTROLS) {
-        updateGravity(state.gravity.x, state.gravity.y);
-        return;
+      state.particles.push(particle);
+    }
+
+    function trimParticles() {
+      const velocityMag = (p) => Math.abs(p.x - p.px) + Math.abs(p.y - p.py);
+      state.particles.sort((a, b) => {
+        const av = velocityMag(a);
+        const bv = velocityMag(b);
+        if (av === bv) {
+          return b.y - a.y;
+        }
+        return av - bv;
+      });
+      const removeCount = Math.max(1, state.particles.length - MAX_PARTICLES + 10);
+      state.particles.splice(0, removeCount);
+    }
+
+    function stepVerlet(dt) {
+      const axBase = state.tilt.x * 120;
+      const ayBase = 30 + state.tilt.y * 40;
+      const dtSq = dt * dt;
+
+      state.particles.forEach((p) => {
+        const vx = (p.x - p.px) * p.damping;
+        const vy = (p.y - p.py) * p.damping;
+        p.px = p.x;
+        p.py = p.y;
+        p.x += vx + axBase * dtSq;
+        p.y += vy + ayBase * dtSq;
+        p.age += dt;
+      });
+    }
+
+    function buildGrid() {
+      state.grid.clear();
+      state.particles.forEach((p, index) => {
+        const cx = Math.floor(p.x / CELL_SIZE);
+        const cy = Math.floor(p.y / CELL_SIZE);
+        const key = `${cx},${cy}`;
+        if (!state.grid.has(key)) {
+          state.grid.set(key, []);
+        }
+        state.grid.get(key).push(index);
+      });
+    }
+
+    function solveParticleCollisions(iterations) {
+      for (let iter = 0; iter < iterations; iter++) {
+        buildGrid();
+        state.particles.forEach((p, index) => {
+          const cx = Math.floor(p.x / CELL_SIZE);
+          const cy = Math.floor(p.y / CELL_SIZE);
+          for (let gx = cx - 1; gx <= cx + 1; gx++) {
+            for (let gy = cy - 1; gy <= cy + 1; gy++) {
+              const key = `${gx},${gy}`;
+              const cell = state.grid.get(key);
+              if (!cell) {
+                continue;
+              }
+              cell.forEach((otherIndex) => {
+                if (otherIndex <= index) {
+                  return;
+                }
+                const other = state.particles[otherIndex];
+                const dx = other.x - p.x;
+                const dy = other.y - p.y;
+                const distSq = dx * dx + dy * dy;
+                const minDist = p.radius + other.radius;
+                if (distSq < minDist * minDist) {
+                  const dist = Math.sqrt(distSq) || 0.0001;
+                  const overlap = minDist - dist;
+                  const nx = dx / dist;
+                  const ny = dy / dist;
+                  const totalInv = p.invMass + other.invMass;
+                  const corrA = (overlap * (p.invMass / totalInv)) * -1;
+                  const corrB = overlap * (other.invMass / totalInv);
+                  p.x += nx * corrA;
+                  p.y += ny * corrA;
+                  other.x += nx * corrB;
+                  other.y += ny * corrB;
+                }
+              });
+            }
+          }
+        });
       }
+    }
+
+    function resolveBoundary(p) {
+      const friction = 0.15;
+      let collided = false;
+      if (p.x - p.radius < 0) {
+        p.x = p.radius;
+        collided = true;
+      } else if (p.x + p.radius > state.width) {
+        p.x = state.width - p.radius;
+        collided = true;
+      }
+      if (p.y - p.radius < 0) {
+        p.y = p.radius;
+        collided = true;
+      } else if (p.y + p.radius > state.height) {
+        p.y = state.height - p.radius;
+        collided = true;
+      }
+      if (collided) {
+        const vx = p.x - p.px;
+        const vy = p.y - p.py;
+        p.px = p.x - vx * (1 - friction);
+        p.py = p.y - vy * (1 - friction);
+      }
+    }
+
+    function resolveCollider(p, rect) {
+      const friction = 0.2;
+      const expanded = {
+        x: rect.x - p.radius,
+        y: rect.y - p.radius,
+        w: rect.w + p.radius * 2,
+        h: rect.h + p.radius * 2,
+      };
+      if (
+        p.x >= expanded.x &&
+        p.x <= expanded.x + expanded.w &&
+        p.y >= expanded.y &&
+        p.y <= expanded.y + expanded.h
+      ) {
+        const left = Math.abs(p.x - expanded.x);
+        const right = Math.abs(expanded.x + expanded.w - p.x);
+        const top = Math.abs(p.y - expanded.y);
+        const bottom = Math.abs(expanded.y + expanded.h - p.y);
+        const min = Math.min(left, right, top, bottom);
+        if (min === left) {
+          p.x = expanded.x;
+        } else if (min === right) {
+          p.x = expanded.x + expanded.w;
+        } else if (min === top) {
+          p.y = expanded.y;
+        } else {
+          p.y = expanded.y + expanded.h;
+        }
+        const vx = p.x - p.px;
+        const vy = p.y - p.py;
+        p.px = p.x - vx * (1 - friction);
+        p.py = p.y - vy * (1 - friction);
+      }
+    }
+
+    function solveColliders() {
+      state.particles.forEach((p) => {
+        resolveBoundary(p);
+        state.colliders.forEach((rect) => resolveCollider(p, rect));
+      });
+    }
+
+    function computeLevel() {
+      const darks = state.particles.filter((p) => p.type === "dark");
+      if (darks.length === 0) {
+        return state.height - 120;
+      }
+      const sorted = darks.map((p) => p.y).sort((a, b) => a - b);
+      const count = Math.max(1, Math.floor(sorted.length * 0.1));
+      const avg = sorted.slice(0, count).reduce((sum, v) => sum + v, 0) / count;
+      return avg;
+    }
+
+    function draw() {
+      const ctx = state.ctx;
+      ctx.clearRect(0, 0, state.width, state.height);
+      state.particles.forEach((p) => {
+        ctx.beginPath();
+        ctx.fillStyle = p.color;
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      const line = document.getElementById("levelLine");
+      line.style.top = `${state.levelY.toFixed(1)}px`;
+    }
+
+    function setupTilt() {
+      const updateTilt = (x, y) => {
+        state.tilt.x = Math.max(-1, Math.min(1, x));
+        state.tilt.y = Math.max(-1, Math.min(1, y));
+      };
 
       if (window.DeviceOrientationEvent) {
         window.addEventListener("deviceorientation", (event) => {
           const gamma = event.gamma ?? 0;
           const beta = event.beta ?? 0;
-          const x = Math.max(-1, Math.min(1, gamma / 30));
-          const y = Math.max(-1, Math.min(1, beta / 30));
-          updateGravity(x, y);
+          updateTilt(gamma / 30, beta / 45);
         });
       }
 
@@ -501,97 +520,42 @@
         const cy = rect.top + rect.height / 2;
         const dx = (event.clientX - cx) / (rect.width / 2);
         const dy = (event.clientY - cy) / (rect.height / 2);
-        const x = Math.max(-1, Math.min(1, dx));
-        const y = Math.max(-1, Math.min(1, dy));
-        updateGravity(x, y);
+        updateTilt(dx * 0.5, dy * 0.4);
       });
     }
 
-    function setupControlPanel() {
-      const updateValue = (inputId, outputId, format = (value) => value) => {
-        const input = document.getElementById(inputId);
-        const output = document.getElementById(outputId);
-        const handler = () => {
-          if (!output) {
-            return;
-          }
-          output.textContent = format(input.value);
-        };
-        input.addEventListener("input", handler);
-        handler();
-      };
-
-      updateValue("darkCount", "darkCountValue");
-      updateValue("lightCount", "lightCountValue");
-      updateValue("spawnRate", "spawnRateValue");
-      updateValue("gravityX", "gravityXValue", (value) => Number(value).toFixed(2));
-      updateValue("gravityY", "gravityYValue", (value) => Number(value).toFixed(2));
-      updateValue("restitution", "restitutionValue", (value) => Number(value).toFixed(2));
-      updateValue("friction", "frictionValue", (value) => Number(value).toFixed(2));
-      updateValue("sizeRange", "sizeRangeValue", (value) => `${value}–${(Number(value) + 2).toFixed(1)}`);
-
-      const applyGravityFromControls = () => {
-        const x = parseFloat(document.getElementById("gravityX").value);
-        const y = parseFloat(document.getElementById("gravityY").value);
-        state.gravity.x = x;
-        state.gravity.y = y;
-        state.engine.gravity.x = x;
-        state.engine.gravity.y = y;
-      };
-
-      document.getElementById("gravityX").addEventListener("input", applyGravityFromControls);
-      document.getElementById("gravityY").addEventListener("input", applyGravityFromControls);
-
-      document.getElementById("restartSim").addEventListener("click", () => {
-        state.settings.targetDark = parseInt(document.getElementById("darkCount").value, 10) || 0;
-        state.settings.targetLight = parseInt(document.getElementById("lightCount").value, 10) || 0;
-        state.settings.spawnRate = parseInt(document.getElementById("spawnRate").value, 10) || 1;
-        state.settings.restitution = parseFloat(document.getElementById("restitution").value);
-        state.settings.friction = parseFloat(document.getElementById("friction").value);
-        state.settings.sizeBase = parseFloat(document.getElementById("sizeRange").value);
-        applyGravityFromControls();
-        resetSimulation();
-      });
-    }
-
-    function resetSimulation() {
-      const { World, Runner } = Matter;
-      state.particles.forEach((particle) => World.remove(state.engine.world, particle));
-      state.particles = [];
-      state.counts = { dark: 0, light: 0 };
-      state.animationStopped = false;
-      if (state.frameId) {
-        cancelAnimationFrame(state.frameId);
-        state.frameId = null;
+    function loop(timestamp) {
+      if (!state.lastTime) {
+        state.lastTime = timestamp;
       }
-      Runner.run(state.runner, state.engine);
-      tick();
+      const dt = Math.min(0.033, (timestamp - state.lastTime) / 1000);
+      state.lastTime = timestamp;
+      state.elapsed += dt;
+
+      const levelTarget = computeLevel();
+      state.levelY += (levelTarget - state.levelY) * 0.08;
+
+      spawnDark(dt);
+      const allowLight = state.levelY < state.height * 0.75;
+      spawnLight(dt, allowLight);
+
+      stepVerlet(dt);
+      solveParticleCollisions(COLLISION_ITERATIONS);
+      solveColliders();
+      draw();
+
+      requestAnimationFrame(loop);
     }
 
-    function checkStopCondition() {
-      return false;
-    }
-
-    function tick() {
-      if (state.animationStopped) {
-        return;
-      }
-      spawnParticles();
-      updateLevelLine();
-      if (checkStopCondition()) {
-        Matter.Runner.stop(state.runner);
-        state.animationStopped = true;
-        return;
-      }
-      state.frameId = requestAnimationFrame(tick);
-    }
-
+    setupCanvas();
     setupUI();
-    setupPhysics();
-    setupTiltControls();
-    setupControlPanel();
-    setLevelDate();
-    tick();
+    initColliders();
+    setupTilt();
+    window.addEventListener("resize", () => {
+      setupCanvas();
+      initColliders();
+    });
+    requestAnimationFrame(loop);
   </script>
 </body>
 </html>
