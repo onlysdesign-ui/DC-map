@@ -121,6 +121,19 @@
       max-height: 260px;
       overflow: auto;
     }
+    .barDetailsControls{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--ui-border);
+    }
+    .select--small{
+      padding:5px 8px;
+      font-size:12px;
+    }
     .barDetailsCard{
       border: 1px solid rgba(148, 163, 184, 0.2);
       background: rgba(15, 23, 42, 0.6);
@@ -140,6 +153,21 @@
       white-space: pre-wrap;
       word-break: break-word;
       color: var(--ui-muted);
+    }
+    .barDetailsMeta{
+      display:grid;
+      gap:6px;
+      color: var(--ui-muted);
+    }
+    .barDetailsMetaRow{
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      font-size:12px;
+    }
+    .barDetailsMetaRow span:first-child{
+      color: var(--ui-text);
+      font-weight: 600;
     }
   
     /* Infographic feel: лёгкое свечение/смягчение именно для deck.gl слоя */
@@ -385,9 +413,19 @@
         </select>
       </div>
     </div>
-      <div class="barDetails" id="barDetails">
-        <span class="labelText">Click a bar to see details.</span>
+      <div class="barDetailsControls">
+        <span class="labelText" id="barDetailsSummary">Click a bar to see details.</span>
+        <label class="labelText">
+          Sort by
+          <select id="barSort" class="select select--small">
+            <option value="date-desc" selected>Date ↓</option>
+            <option value="date-asc">Date ↑</option>
+            <option value="size-desc">Size ↓</option>
+            <option value="size-asc">Size ↑</option>
+          </select>
+        </label>
       </div>
+      <div class="barDetails" id="barDetails"></div>
   </div>
 </div>
     <div id="stat" class="stat" style="display:none"></div>
@@ -464,6 +502,8 @@ const sliderEl = document.getElementById("slider");
   const panelEl = document.getElementById("controlPanel");
   const togglePanelEl = document.getElementById("togglePanel");
   const barDetailsEl = document.getElementById("barDetails");
+  const barDetailsSummaryEl = document.getElementById("barDetailsSummary");
+  const barSortSelectEl = document.getElementById("barSort");
 
   function setStat(t){ if (statEl) statEl.textContent = t || ""; }
   function setVals(){
@@ -622,6 +662,14 @@ const sliderEl = document.getElementById("slider");
     }
     return Math.round(value).toLocaleString();
   }
+  function formatDate(ms) {
+    if (!ms) return "—";
+    return new Date(ms).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "2-digit"
+    });
+  }
   function escapeHtml(str) {
     return String(str)
       .replace(/&/g, "&amp;")
@@ -630,15 +678,41 @@ const sliderEl = document.getElementById("slider");
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
   }
+  function getPointDateMs(point) {
+    const props = point.properties || {};
+    const raw = getProp(props, ["@timestamp", "timestamp", "date", "opened", "open_date"]);
+    return parseTimestampToMs(raw);
+  }
+  function getPointSizeInfo(point) {
+    const props = point.properties || {};
+    const area = parseNumber(getProp(props, ["area_in_m2", "area_m2", "area", "building:floor_area", "size"]));
+    if (area) return { value: area, unit: "m²" };
+    const power = parseNumber(getProp(props, ["capacity_mw", "power_mw"]));
+    if (power) return { value: power, unit: "MW" };
+    return { value: 0, unit: "" };
+  }
   function formatPointDetails(point) {
     const props = point.properties || {};
-    const payload = {
-      coordinates: point.coordinates,
-      timestamp: getProp(props, ["@timestamp", "timestamp"]) || null,
-      pci: point.pci || 0,
-      properties: props
-    };
-    return escapeHtml(JSON.stringify(payload, null, 2));
+    const name = getProp(props, ["name", "title", "facility", "operator", "company"]) || "Data center";
+    const status = getProp(props, ["status", "stage", "phase"]) || "—";
+    const dateMs = getPointDateMs(point);
+    const sizeInfo = getPointSizeInfo(point);
+    const sizeLabel = sizeInfo.value ? `${sizeInfo.value.toLocaleString()} ${sizeInfo.unit}` : "—";
+    const buildings = parseNumber(getProp(props, ["number_of_buildings", "building_count", "building:units"]));
+    const location = point.coordinates?.length === 2
+      ? `${point.coordinates[1].toFixed(4)}, ${point.coordinates[0].toFixed(4)}`
+      : "—";
+
+    return `
+      <h4>${escapeHtml(name)}</h4>
+      <div class="barDetailsMeta">
+        <div class="barDetailsMetaRow"><span>Date</span><span>${escapeHtml(formatDate(dateMs))}</span></div>
+        <div class="barDetailsMetaRow"><span>Size</span><span>${escapeHtml(sizeLabel)}</span></div>
+        <div class="barDetailsMetaRow"><span>Status</span><span>${escapeHtml(String(status))}</span></div>
+        <div class="barDetailsMetaRow"><span>Buildings</span><span>${buildings ? buildings.toLocaleString() : "—"}</span></div>
+        <div class="barDetailsMetaRow"><span>Location</span><span>${escapeHtml(location)}</span></div>
+      </div>
+    `;
   }
   function getPointsForCellAtIndex(cell, idx) {
     const points = cellPointsIndex.get(cell) || [];
@@ -649,26 +723,40 @@ const sliderEl = document.getElementById("slider");
   function renderBarDetails(cell) {
     if (!barDetailsEl) return;
     if (!cell) {
-      barDetailsEl.innerHTML = `<span class="labelText">Click a bar to see details.</span>`;
+      barDetailsEl.innerHTML = "";
+      if (barDetailsSummaryEl) barDetailsSummaryEl.textContent = "Click a bar to see details.";
       return;
     }
     const points = getPointsForCellAtIndex(cell, currentTimelineIndex);
     if (!points.length) {
-      barDetailsEl.innerHTML = `<span class="labelText">No objects in this bar for the selected time.</span>`;
+      barDetailsEl.innerHTML = "";
+      if (barDetailsSummaryEl) barDetailsSummaryEl.textContent = "No objects in this bar for the selected time.";
       return;
     }
-    const header = `<div class="labelText">Objects in bar: ${points.length}</div>`;
-    const cards = points
-      .map((point, index) => {
+    const sortMode = barSortSelectEl?.value || "date-desc";
+    const sorted = [...points].sort((a, b) => {
+      if (sortMode.startsWith("date")) {
+        const aDate = getPointDateMs(a) || 0;
+        const bDate = getPointDateMs(b) || 0;
+        return sortMode === "date-asc" ? aDate - bDate : bDate - aDate;
+      }
+      const aSize = getPointSizeInfo(a).value;
+      const bSize = getPointSizeInfo(b).value;
+      return sortMode === "size-asc" ? aSize - bSize : bSize - aSize;
+    });
+    if (barDetailsSummaryEl) {
+      barDetailsSummaryEl.textContent = `Objects in bar: ${sorted.length}`;
+    }
+    const cards = sorted
+      .map((point) => {
         return `
           <div class="barDetailsCard">
-            <h4>Object ${index + 1}</h4>
-            <pre>${formatPointDetails(point)}</pre>
+            ${formatPointDetails(point)}
           </div>
         `;
       })
       .join("");
-    barDetailsEl.innerHTML = header + cards;
+    barDetailsEl.innerHTML = cards;
   }
   function rebuildCellPointsIndex(res) {
     const index = new Map();
@@ -1472,6 +1560,11 @@ seedRegistryFromPoints(filteredPoints, res);
       syncMetricUi();
       renderHistogram();
       applyTimeline(Number(sliderEl.value || 0));
+    });
+  }
+  if (barSortSelectEl) {
+    barSortSelectEl.addEventListener("change", () => {
+      renderBarDetails(selectedCell);
     });
   }
   paletteEl.addEventListener("change", () => { setVals(); updateOverlay(); });
