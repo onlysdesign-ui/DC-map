@@ -532,10 +532,11 @@ const sliderEl = document.getElementById("slider");
     return Number.isFinite(n) ? n : 0;
   }
   function computePCI(props) {
-    const area = parseNumber(getProp(props, ["area_in_m2", "area", "building:floor_area"]));
+    const area = parseNumber(getProp(props, ["area_in_m2", "area_m2", "area", "building:floor_area"]));
     const buildings = parseNumber(getProp(props, ["number_of_buildings", "building_count", "building:units"]));
-    if (area <= 0 || buildings <= 0) return 0;
-    return Math.log(area) * buildings;
+    const effectiveBuildings = buildings > 0 ? buildings : 1;
+    if (area <= 0) return 0;
+    return Math.log(area) * effectiveBuildings;
   }
   function parseTimestampToMs(ts) { const d = new Date(ts); const ms = d.getTime(); return Number.isFinite(ms) ? ms : null; }
   function toMonthMs(ms) { const d = new Date(ms); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1); }
