@@ -112,6 +112,35 @@
       color:var(--ui-text);
       outline:none;
     }
+    .barDetails{
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--ui-border);
+      display: grid;
+      gap: 8px;
+      max-height: 260px;
+      overflow: auto;
+    }
+    .barDetailsCard{
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .barDetailsCard h4{
+      margin: 0 0 6px 0;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ui-text);
+    }
+    .barDetailsCard pre{
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--ui-muted);
+    }
   
     /* Infographic feel: лёгкое свечение/смягчение именно для deck.gl слоя */
     canvas.deckgl-overlay, .deckgl-overlay canvas {
@@ -298,6 +327,13 @@
       </div>
       <div style="margin-top:10px;">
         <div class="labelRow">
+          <span class="labelText">Bar opacity</span>
+          <span id="barOpacityVal" class="pill">100%</span>
+        </div>
+        <input id="barOpacity" type="range" min="0.1" max="1" step="0.05" value="0.9">
+      </div>
+      <div style="margin-top:10px;">
+        <div class="labelRow">
           <span class="labelText">Palette</span>
           <span id="paletteVal" class="pill">Mono Blue</span>
         </div>
@@ -349,6 +385,9 @@
         </select>
       </div>
     </div>
+      <div class="barDetails" id="barDetails">
+        <span class="labelText">Click a bar to see details.</span>
+      </div>
   </div>
 </div>
     <div id="stat" class="stat" style="display:none"></div>
@@ -414,6 +453,8 @@ const sliderEl = document.getElementById("slider");
   const playBtn = document.getElementById("play");
   const elevEl = document.getElementById("elev");
   const elevValEl = document.getElementById("elevVal");
+  const barOpacityEl = document.getElementById("barOpacity");
+  const barOpacityValEl = document.getElementById("barOpacityVal");
   const logToggleEl = document.getElementById("logToggle");
   const metricSelectEl = document.getElementById("metricSelect");
   const h3resEl = document.getElementById("h3res");
@@ -422,11 +463,15 @@ const sliderEl = document.getElementById("slider");
   const paletteValEl = document.getElementById("paletteVal");
   const panelEl = document.getElementById("controlPanel");
   const togglePanelEl = document.getElementById("togglePanel");
+  const barDetailsEl = document.getElementById("barDetails");
 
   function setStat(t){ if (statEl) statEl.textContent = t || ""; }
   function setVals(){
     elevValEl.textContent = `x${Number(elevEl.value)}`;
     resValEl.textContent = String(h3resEl.value);
+    if (barOpacityValEl && barOpacityEl) {
+      barOpacityValEl.textContent = `${Math.round(Number(barOpacityEl.value) * 100)}%`;
+    }
     if (paletteValEl) {
       const selected = paletteEl?.selectedOptions?.[0];
       paletteValEl.textContent = selected ? selected.textContent.replace(" (dark map)", "") : "—";
@@ -453,6 +498,9 @@ const sliderEl = document.getElementById("slider");
   // Stable registry: cell -> object reused across frames
     const cellRegistry = new Map(); // cell -> {cell, count}
     let stableCells = [];           // stable array passed to deck.gl
+  let cellPointsIndex = new Map(); // cell -> points[]
+  let selectedCell = null;
+  let currentTimelineIndex = 0;
   
 
   // Base grid (so 0-count hexes still render)
@@ -573,6 +621,69 @@ const sliderEl = document.getElementById("slider");
       return value.toLocaleString(undefined, {maximumFractionDigits: 2});
     }
     return Math.round(value).toLocaleString();
+  }
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+  function formatPointDetails(point) {
+    const props = point.properties || {};
+    const payload = {
+      coordinates: point.coordinates,
+      timestamp: getProp(props, ["@timestamp", "timestamp"]) || null,
+      pci: point.pci || 0,
+      properties: props
+    };
+    return escapeHtml(JSON.stringify(payload, null, 2));
+  }
+  function getPointsForCellAtIndex(cell, idx) {
+    const points = cellPointsIndex.get(cell) || [];
+    if (!months.length) return points;
+    const cutoff = months[idx];
+    return points.filter((p) => p.tMonthMs != null && p.tMonthMs <= cutoff);
+  }
+  function renderBarDetails(cell) {
+    if (!barDetailsEl) return;
+    if (!cell) {
+      barDetailsEl.innerHTML = `<span class="labelText">Click a bar to see details.</span>`;
+      return;
+    }
+    const points = getPointsForCellAtIndex(cell, currentTimelineIndex);
+    if (!points.length) {
+      barDetailsEl.innerHTML = `<span class="labelText">No objects in this bar for the selected time.</span>`;
+      return;
+    }
+    const header = `<div class="labelText">Objects in bar: ${points.length}</div>`;
+    const cards = points
+      .map((point, index) => {
+        return `
+          <div class="barDetailsCard">
+            <h4>Object ${index + 1}</h4>
+            <pre>${formatPointDetails(point)}</pre>
+          </div>
+        `;
+      })
+      .join("");
+    barDetailsEl.innerHTML = header + cards;
+  }
+  function rebuildCellPointsIndex(res) {
+    const index = new Map();
+    for (const p of filteredPoints) {
+      const [lon, lat] = p.coordinates || [];
+      if (typeof lon !== "number" || typeof lat !== "number") continue;
+      const cell = h3.latLngToCell(lat, lon, res);
+      const entry = index.get(cell) || [];
+      entry.push({ ...p, cell });
+      index.set(cell, entry);
+    }
+    cellPointsIndex = index;
+    if (selectedCell) {
+      renderBarDetails(selectedCell);
+    }
   }
   function syncMetricUi() {
     const metric = getMetric();
@@ -699,6 +810,7 @@ async function ensureBaseGridFromPoints(res) {
 
 function makeLayer() {
   const elevationScale = Number(elevEl.value); // высота за 1 DC
+  const barOpacity = Math.max(0, Math.min(1, Number(barOpacityEl?.value ?? 1)));
   const metric = getMetric();
   const useLog = metric === "count" && !!logToggleEl.checked;
   const transform = (n) => useLog ? Math.log1p(n) : n;
@@ -1003,8 +1115,8 @@ const COLOR_CAP = 12; // 12+ будет просто самым насыщенн
     data: cellsNow, // [{cell, count}]
     updateTriggers: {
       getElevation: [frameTick, elevEl.value, logToggleEl.checked, h3resEl.value, metric],
-      getFillColor: [frameTick, logToggleEl.checked, paletteKey, metric],
-      getLineColor: [frameTick, logToggleEl.checked, paletteKey, metric]
+      getFillColor: [frameTick, logToggleEl.checked, paletteKey, metric, barOpacityEl?.value],
+      getLineColor: [frameTick, logToggleEl.checked, paletteKey, metric, barOpacityEl?.value]
     },
     // h3 boundary -> polygon (lon/lat)
     getPolygon: d => {
@@ -1045,7 +1157,7 @@ getFillColor: d => {
   const glowMix = Math.min(1, glow * 1.15);
   const [gr, gg, gb] = palette.glow;
   const mix = (base, boost) => Math.round(base + (boost - base) * glowMix);
-  const alpha = Math.round(255 * (0.9 + glowMix * 0.1));
+  const alpha = Math.round(255 * (0.9 + glowMix * 0.1) * barOpacity);
   return [mix(r, gr), mix(g, gg), mix(b, gb), alpha];
 },
 
@@ -1065,7 +1177,7 @@ getLineColor: d => {
   const [gr, gg, gb] = palette.glow;
   const [er, eg, eb] = palette.edge || [20, 28, 40];
   const mix = (base, boost) => Math.round(base + (boost - base) * glowMix);
-  const glowAlpha = Math.round(160 + glow * 90);
+  const glowAlpha = Math.round((160 + glow * 90) * barOpacity);
   return [mix(er, gr), mix(eg, gg), mix(eb, gb), glowAlpha];
 },
 
@@ -1080,7 +1192,16 @@ lineWidthMinPixels: 1.5,
   diffuse: 0.55,
   shininess: 80,
   specularColor: [255, 255, 255]
-}
+},
+    onClick: (info) => {
+      if (!info?.object?.cell) {
+        selectedCell = null;
+        renderBarDetails(null);
+        return;
+      }
+      selectedCell = info.object.cell;
+      renderBarDetails(selectedCell);
+    }
   });
 }
 
@@ -1118,6 +1239,8 @@ lineWidthMinPixels: 1.5,
       monthlyCountChanges = [];
       monthlyPciChanges = [];
       renderHistogram();
+      const res = Number(h3resEl.value);
+      rebuildCellPointsIndex(res);
       // вместо пустоты показываем базовую сетку UK
        try {
           const res = Number(h3resEl.value);
@@ -1133,6 +1256,7 @@ seedRegistryFromPoints(filteredPoints, res);
 
       updateOverlay();
       setStat("No @timestamp found in data (or it failed to parse). Expected properties['@timestamp'] from Overpass meta.");
+      renderBarDetails(selectedCell);
       return;
     }
 
@@ -1146,6 +1270,7 @@ seedRegistryFromPoints(filteredPoints, res);
     renderHistogram();
 
     const res = Number(h3resEl.value);
+    rebuildCellPointsIndex(res);
 
     // Pre-register all cells that can appear, so elevation transitions work as 0→N instead of popping in.
     seedRegistryFromPoints(filteredPoints, res);
@@ -1197,6 +1322,7 @@ seedRegistryFromPoints(filteredPoints, res);
   }
 
   function applyTimeline(idx) {
+    currentTimelineIndex = idx;
     const t = months[idx];
     renderTimeLabel(t);
     highlightHistogram(idx);
@@ -1250,6 +1376,9 @@ seedRegistryFromPoints(filteredPoints, res);
       : `${formatMetricValue(total, metric)} shown`;
 
     updateOverlay();
+    if (selectedCell) {
+      renderBarDetails(selectedCell);
+    }
   }
 
   function startGlowTicker() {
@@ -1334,6 +1463,9 @@ seedRegistryFromPoints(filteredPoints, res);
   attachTimelineDrag(histogramProgressEl);
 
   elevEl.addEventListener("input", () => { setVals(); updateOverlay(); });
+  if (barOpacityEl) {
+    barOpacityEl.addEventListener("input", () => { setVals(); updateOverlay(); });
+  }
   logToggleEl.addEventListener("change", () => { updateOverlay(); });
   if (metricSelectEl) {
     metricSelectEl.addEventListener("change", () => {
@@ -1368,6 +1500,9 @@ seedRegistryFromPoints(filteredPoints, res);
     fileEl.value="";
     sliderEl.disabled=true; sliderEl.min="0"; sliderEl.max="0"; sliderEl.value="0";
     timeLabelEl.textContent="—"; stepsLabelEl.textContent="0 steps"; shownPillEl.textContent="0 shown";
+    selectedCell = null;
+    cellPointsIndex = new Map();
+    renderBarDetails(null);
     renderHistogram();
     updateHistogramProgress(0);
     setStat("Cleared.");
